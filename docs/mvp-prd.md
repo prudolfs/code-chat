@@ -428,14 +428,14 @@ MVP decisions:
 
 ### Phase 2: Data and Auth
 
-- [ ] Define Convex schema for projects, files, chunks, chats, and messages.
-- [ ] Add Convex indexes for user projects, project files, project chunks, project chats, and chat messages.
-- [ ] Add Convex vector index for chunk embeddings.
-- [ ] Implement authenticated user helpers for Convex queries and mutations.
-- [ ] Implement project ownership checks.
-- [ ] Enforce one-project-per-chat and many-chats-per-project relationships.
-- [ ] Implement auth UI for email/password, Google, GitHub, and sign out.
-- [ ] Add tests for authenticated vs unauthenticated states and ownership checks.
+- [x] Define Convex schema for projects, files, chunks, chats, and messages.
+- [x] Add Convex indexes for user projects, project files, project chunks, project chats, and chat messages.
+- [x] Add Convex vector index for chunk embeddings.
+- [x] Implement authenticated user helpers for Convex queries and mutations.
+- [x] Implement project ownership checks.
+- [x] Enforce one-project-per-chat and many-chats-per-project relationships.
+- [x] Implement auth UI for email/password, Google, GitHub, and sign out.
+- [x] Add tests for authenticated vs unauthenticated states and ownership checks.
 
 ### Phase 3: Ingestion Core
 

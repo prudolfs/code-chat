@@ -8,13 +8,25 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
+import type * as chats from "../chats.js";
+import type * as http from "../http.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as projects from "../projects.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
+  chats: typeof chats;
+  http: typeof http;
+  "lib/auth": typeof lib_auth;
+  projects: typeof projects;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
@@ -42,4 +54,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+};

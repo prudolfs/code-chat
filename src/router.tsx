@@ -1,16 +1,17 @@
-import { createRouter } from "@tanstack/react-router";
-import { QueryClient } from "@tanstack/react-query";
-import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
-import { ConvexQueryClient } from "@convex-dev/react-query";
-import { ConvexProvider } from "convex/react";
-import { routeTree } from "./routeTree.gen";
+import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
+import { ConvexQueryClient } from '@convex-dev/react-query'
+import { QueryClient } from '@tanstack/react-query'
+import { createRouter } from '@tanstack/react-router'
+import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
+import { authClient } from './lib/auth-client'
+import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
-  const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!;
+  const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!
   if (!CONVEX_URL) {
-    console.error("missing envar VITE_CONVEX_URL");
+    console.error('missing envar VITE_CONVEX_URL')
   }
-  const convexQueryClient = new ConvexQueryClient(CONVEX_URL);
+  const convexQueryClient = new ConvexQueryClient(CONVEX_URL)
 
   const queryClient: QueryClient = new QueryClient({
     defaultOptions: {
@@ -19,21 +20,24 @@ export function getRouter() {
         queryFn: convexQueryClient.queryFn(),
       },
     },
-  });
-  convexQueryClient.connect(queryClient);
+  })
+  convexQueryClient.connect(queryClient)
 
   const router = createRouter({
     routeTree,
-    defaultPreload: "intent",
+    defaultPreload: 'intent',
     context: { queryClient },
     scrollRestoration: true,
     Wrap: ({ children }) => (
-      <ConvexProvider client={convexQueryClient.convexClient}>
+      <ConvexBetterAuthProvider
+        client={convexQueryClient.convexClient}
+        authClient={authClient}
+      >
         {children}
-      </ConvexProvider>
+      </ConvexBetterAuthProvider>
     ),
-  });
-  setupRouterSsrQueryIntegration({ router, queryClient });
+  })
+  setupRouterSsrQueryIntegration({ router, queryClient })
 
-  return router;
+  return router
 }

@@ -2,25 +2,19 @@
   "name": "code-chat",
   "version": "1.0.0",
   "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "Rudolfs Pukitis",
+  "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "lint": "oxlint . --fix",
     "format": "oxfmt . --write",
+    "test": "vitest run",
     "check": "tsc --noEmit && oxlint . --fix && oxfmt . --write",
     "types": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "Rudolfs Pukitis",
-  "license": "MIT",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.9.0",
-      "onFail": "download"
-    }
-  },
-  "type": "module",
   "dependencies": {
     "@ai-sdk/react": "^4.0.71",
     "@base-ui/react": "^1.7.0",
@@ -33,7 +27,7 @@
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.47",
     "ai": "^7.0.68",
-    "better-auth": "^1.7.1",
+    "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.44.0",
@@ -54,6 +48,14 @@
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
     "typescript": "^7.0.2",
-    "vite": "^8.2.1"
+    "vite": "^8.2.1",
+    "vitest": "^4.1.11"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.9.0",
+      "onFail": "download"
+    }
   }
 }
