@@ -109,3 +109,34 @@ test('persists assistant messages with citations and error state', async () => {
   expect(messages[0].sourceChunkIds).toEqual([chunkId])
   expect(messages[1].error).toBe('Assistant response failed. Please try again.')
 })
+
+test('deletes a chat and its messages for the owning user', async () => {
+  const t = convexTest(schema, modules)
+  const authed = t.withIdentity(identity)
+  const projectId = await authed.mutation(api.projects.create, {
+    name: 'Delete chat project',
+    sourceType: 'local',
+    fingerprint: 'delete-chat-project',
+  })
+  await t.run(async (ctx) => {
+    await ctx.db.patch(projectId, { status: 'ready' })
+  })
+  const chatId = await authed.mutation(api.chats.create, { projectId })
+  await authed.mutation(api.chats.send, {
+    chatId,
+    content: 'What should be removed?',
+  })
+
+  await authed.mutation(api.chats.remove, { chatId })
+
+  const chats = await authed.query(api.chats.list, { projectId })
+  const messages = await t.run(async (ctx) => {
+    return await ctx.db
+      .query('messages')
+      .withIndex('by_chatId', (q) => q.eq('chatId', chatId))
+      .collect()
+  })
+
+  expect(chats).toEqual([])
+  expect(messages).toEqual([])
+})

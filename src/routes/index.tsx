@@ -161,9 +161,12 @@ function ProjectHome({ email }: { email: string }) {
     sourceUrl?: string
     fingerprint?: string
   } | null>(null)
-  const [warningProjectId, setWarningProjectId] =
-    useState<Id<'projects'> | null>(null)
+  const [projectDialog, setProjectDialog] = useState<{
+    projectId: Id<'projects'>
+    mode: 'warnings' | 'delete'
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
   const duplicate = useQuery(
     api.projects.findDuplicate,
     duplicateRequest ?? 'skip',
@@ -176,7 +179,9 @@ function ProjectHome({ email }: { email: string }) {
     if (sourceType === 'github') {
       const repository = parseGitHubRepository(githubUrl)
       if (!repository) {
-        setError('Enter a valid public GitHub repository URL.')
+        setError(
+          'Enter a public GitHub repository URL like https://github.com/owner/repository.',
+        )
         return
       }
       const nextImport: PendingImport = {
@@ -194,7 +199,7 @@ function ProjectHome({ email }: { email: string }) {
     }
 
     if (selectedFiles.length === 0) {
-      setError('Choose a project folder first.')
+      setError('Choose a project folder before importing.')
       return
     }
     const prepared = await prepareProjectArchive(selectedFiles)
@@ -237,6 +242,7 @@ function ProjectHome({ email }: { email: string }) {
   async function completeImport(action: 'create' | 'replace') {
     if (!pendingImport) return
     setError(null)
+    setIsImporting(true)
     try {
       let projectId
       if (action === 'replace' && duplicate) {
@@ -262,19 +268,25 @@ function ProjectHome({ email }: { email: string }) {
       setDuplicateRequest(null)
       setSelectedFiles([])
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Project import failed')
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Project import failed. Check the selected folder or repository URL and try again.',
+      )
+    } finally {
+      setIsImporting(false)
     }
   }
 
   return (
-    <main className="min-h-screen bg-muted/30 p-6">
-      <section className="mx-auto flex max-w-5xl items-center justify-between border-b pb-5">
+    <main className="min-h-screen bg-muted/30 p-4 sm:p-6">
+      <section className="mx-auto flex max-w-5xl flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-muted-foreground">CodeChat</p>
           <h1 className="text-2xl font-semibold">Your projects</h1>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span>{email}</span>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="min-w-0 break-all">{email}</span>
           <button
             className="rounded-md border px-3 py-2"
             type="button"
@@ -351,18 +363,23 @@ function ProjectHome({ email }: { email: string }) {
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <button
-            className="w-fit rounded-md bg-primary px-4 py-2 text-primary-foreground"
+            className="w-fit rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
             type="submit"
+            disabled={isImporting}
           >
-            Import project
+            {isImporting ? 'Starting import...' : 'Import project'}
           </button>
         </form>
       </section>
 
       <ChatWorkspace
         projects={projects}
-        onDeleteProject={setWarningProjectId}
-        onReviewWarnings={setWarningProjectId}
+        onDeleteProject={(projectId) =>
+          setProjectDialog({ projectId, mode: 'delete' })
+        }
+        onReviewWarnings={(projectId) =>
+          setProjectDialog({ projectId, mode: 'warnings' })
+        }
       />
 
       {duplicate && pendingImport && (
@@ -381,6 +398,7 @@ function ProjectHome({ email }: { email: string }) {
               <button
                 className="rounded-md border px-3 py-2 text-sm"
                 type="button"
+                disabled={isImporting}
                 onClick={() => completeImport('create')}
               >
                 Create duplicate
@@ -388,6 +406,7 @@ function ProjectHome({ email }: { email: string }) {
               <button
                 className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
                 type="button"
+                disabled={isImporting}
                 onClick={() => completeImport('replace')}
               >
                 Replace and re-index
@@ -429,6 +448,7 @@ function ProjectHome({ email }: { email: string }) {
               <button
                 className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
                 type="button"
+                disabled={isImporting}
                 onClick={() => completeImport('create')}
               >
                 Start indexing
@@ -438,13 +458,16 @@ function ProjectHome({ email }: { email: string }) {
         </div>
       )}
 
-      {warningProjectId && (
+      {projectDialog && (
         <WarningDialog
-          project={projects?.find((item) => item._id === warningProjectId)}
-          onClose={() => setWarningProjectId(null)}
+          mode={projectDialog.mode}
+          project={projects?.find(
+            (item) => item._id === projectDialog.projectId,
+          )}
+          onClose={() => setProjectDialog(null)}
           onDelete={async () => {
-            await removeProject({ projectId: warningProjectId })
-            setWarningProjectId(null)
+            await removeProject({ projectId: projectDialog.projectId })
+            setProjectDialog(null)
           }}
         />
       )}
@@ -483,6 +506,7 @@ function ChatWorkspace({
   const [error, setError] = useState<string | null>(null)
   const createChat = useMutation(api.chats.create)
   const sendMessage = useMutation(api.chats.send)
+  const removeChat = useMutation(api.chats.remove)
   const selectedProject =
     projects?.find((project) => project._id === selectedProjectId) ??
     projects?.[0] ??
@@ -498,8 +522,17 @@ function ChatWorkspace({
   const projectIsReady =
     selectedProject?.status === 'ready' ||
     selectedProject?.status === 'ready_with_warnings'
+  const inputDisabledReason = !selectedProject
+    ? 'Select a project'
+    : !projectIsReady
+      ? projectStatusMessage(selectedProject)
+      : !selectedChatId
+        ? 'Start a chat first'
+        : null
   const pendingAssistant =
-    isSending || messages?.at(-1)?.role === 'user' || messages === undefined
+    isSending ||
+    (selectedChatId !== null &&
+      (messages?.at(-1)?.role === 'user' || messages === undefined))
 
   useEffect(() => {
     if (!selectedProjectId && projects && projects.length > 0) {
@@ -522,6 +555,13 @@ function ChatWorkspace({
     setError(null)
     const chatId = await createChat({ projectId: selectedProject._id })
     setSelectedChatId(chatId)
+  }
+
+  async function deleteChat(chatId: Id<'chats'>) {
+    if (!window.confirm('Delete this chat and its messages?')) return
+    setError(null)
+    await removeChat({ chatId })
+    if (selectedChatId === chatId) setSelectedChatId(null)
   }
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -553,27 +593,33 @@ function ChatWorkspace({
 
   if (projects.length === 0) {
     return (
-      <section className="mx-auto max-w-5xl text-sm text-muted-foreground">
-        No projects yet.
+      <section className="mx-auto max-w-5xl rounded-lg border bg-background p-8">
+        <h2 className="text-lg font-semibold">No projects yet</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Import a local folder or public GitHub repository to create an indexed
+          project. Chat opens after indexing finishes.
+        </p>
       </section>
     )
   }
 
   return (
-    <section className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[280px_1fr]">
-      <aside className="rounded-lg border bg-background">
+    <section className="mx-auto grid max-w-5xl gap-4 xl:grid-cols-[280px_1fr]">
+      <aside className="min-w-0 rounded-lg border bg-background">
         <div className="border-b p-4">
           <h2 className="font-medium">Projects</h2>
         </div>
-        <div className="max-h-[34rem] overflow-auto p-2">
+        <div className="max-h-72 overflow-auto p-2 xl:max-h-[34rem]">
           {projects.map((project) => (
             <button
-              className={`mb-2 w-full rounded-md p-3 text-left text-sm ${project._id === selectedProject?._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
+              className={`mb-2 w-full min-w-0 rounded-md p-3 text-left text-sm ${project._id === selectedProject?._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
               key={project._creationTime}
               type="button"
               onClick={() => setSelectedProjectId(project._id)}
             >
-              <span className="block font-medium">{project.name}</span>
+              <span className="block font-medium break-words">
+                {project.name}
+              </span>
               <span className="mt-1 block text-xs text-muted-foreground">
                 {project.sourceType} · {project.status}
               </span>
@@ -614,7 +660,7 @@ function ChatWorkspace({
         )}
       </aside>
 
-      <section className="grid min-h-[36rem] overflow-hidden rounded-lg border bg-background lg:grid-cols-[220px_1fr]">
+      <section className="grid min-h-[36rem] min-w-0 overflow-hidden rounded-lg border bg-background lg:grid-cols-[220px_1fr]">
         <aside className="border-b p-3 lg:border-r lg:border-b-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="font-medium">Chats</h2>
@@ -629,14 +675,26 @@ function ChatWorkspace({
           </div>
           <div className="max-h-48 overflow-auto lg:max-h-[31rem]">
             {chats?.map((chat) => (
-              <button
-                className={`mb-2 w-full rounded-md px-3 py-2 text-left text-sm ${chat._id === selectedChatId ? 'bg-muted' : 'hover:bg-muted/60'}`}
+              <div
+                className={`mb-2 flex items-center gap-1 rounded-md ${chat._id === selectedChatId ? 'bg-muted' : 'hover:bg-muted/60'}`}
                 key={chat._id}
-                type="button"
-                onClick={() => setSelectedChatId(chat._id)}
               >
-                {chat.title}
-              </button>
+                <button
+                  className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                  type="button"
+                  onClick={() => setSelectedChatId(chat._id)}
+                >
+                  <span className="block truncate">{chat.title}</span>
+                </button>
+                <button
+                  className="mr-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
+                  type="button"
+                  aria-label={`Delete ${chat.title}`}
+                  onClick={() => deleteChat(chat._id)}
+                >
+                  Delete
+                </button>
+              </div>
             ))}
             {chats?.length === 0 && (
               <p className="text-sm text-muted-foreground">No chats yet.</p>
@@ -646,14 +704,27 @@ function ChatWorkspace({
 
         <div className="grid min-h-[36rem] grid-rows-[auto_1fr_auto]">
           <header className="border-b p-4">
-            <h2 className="font-medium">
-              {selectedProject?.name ?? 'Select a project'}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {projectIsReady
-                ? 'Ask questions against the indexed project.'
-                : 'Chat is available after indexing is ready.'}
-            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="font-medium break-words">
+                  {selectedProject?.name ?? 'Select a project'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProject
+                    ? `${selectedProject.sourceType} project · ${projectStatusMessage(selectedProject)}`
+                    : 'Choose an indexed project to chat.'}
+                </p>
+              </div>
+              {selectedProject?.status === 'ready_with_warnings' && (
+                <button
+                  className="w-fit rounded-md border px-3 py-2 text-sm"
+                  type="button"
+                  onClick={() => onReviewWarnings(selectedProject._id)}
+                >
+                  Review warnings
+                </button>
+              )}
+            </div>
           </header>
 
           <div className="space-y-4 overflow-auto p-4">
@@ -668,7 +739,7 @@ function ChatWorkspace({
             )}
             {messages?.map((message) => (
               <article
-                className={`max-w-[85%] rounded-lg border p-3 text-sm ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
+                className={`max-w-full rounded-lg border p-3 text-sm sm:max-w-[85%] ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
                 key={message._id}
               >
                 <p className="whitespace-pre-wrap">{message.content}</p>
@@ -702,18 +773,14 @@ function ChatWorkspace({
               <input
                 className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
                 value={question}
-                disabled={!selectedChatId || !projectIsReady || isSending}
-                placeholder={
-                  projectIsReady
-                    ? 'Ask about this codebase'
-                    : 'Project is not ready'
-                }
+                disabled={inputDisabledReason !== null || isSending}
+                placeholder={inputDisabledReason ?? 'Ask about this codebase'}
                 onChange={(event) => setQuestion(event.target.value)}
               />
               <button
                 className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
                 type="submit"
-                disabled={!selectedChatId || !projectIsReady || isSending}
+                disabled={inputDisabledReason !== null || isSending}
               >
                 Send
               </button>
@@ -725,11 +792,23 @@ function ChatWorkspace({
   )
 }
 
+function projectStatusMessage(project: ProjectSummary) {
+  if (project.status === 'pending') return 'Waiting to start indexing'
+  if (project.status === 'indexing') {
+    return `Indexing files ${project.filesProcessed}/${project.totalFiles}, chunks ${project.chunksEmbedded}/${project.totalChunks}`
+  }
+  if (project.status === 'ready') return 'Ready'
+  if (project.status === 'ready_with_warnings') return 'Ready with warnings'
+  return project.errorMessage ?? 'Import failed'
+}
+
 function WarningDialog({
+  mode,
   project,
   onClose,
   onDelete,
 }: {
+  mode: 'warnings' | 'delete'
   project:
     | {
         name: string
@@ -740,6 +819,7 @@ function WarningDialog({
   onDelete: () => Promise<void>
 }) {
   if (!project) return null
+  const isWarningReview = mode === 'warnings'
   return (
     <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
       <section
@@ -748,16 +828,16 @@ function WarningDialog({
         aria-modal="true"
       >
         <h2 className="text-lg font-semibold">
-          {project.failedFiles.length > 0
+          {isWarningReview
             ? 'Project imported with warnings'
             : 'Delete project?'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {project.failedFiles.length > 0
+          {isWarningReview
             ? 'Some files could not be indexed. You can proceed with the available context or delete this project.'
-            : 'Deleting this project also removes its related chats and messages.'}
+            : `Deleting ${project.name} also removes its related chats, messages, files, and indexed chunks.`}
         </p>
-        {project.failedFiles.length > 0 && (
+        {isWarningReview && project.failedFiles.length > 0 && (
           <ul className="max-h-48 space-y-1 overflow-auto rounded-md bg-muted p-3 text-sm">
             {project.failedFiles.map((file) => (
               <li key={`${file.path}-${file.reason}`}>
@@ -772,9 +852,7 @@ function WarningDialog({
             type="button"
             onClick={onClose}
           >
-            {project.failedFiles.length > 0
-              ? 'Proceed with warnings'
-              : 'Cancel'}
+            {isWarningReview ? 'Proceed with warnings' : 'Cancel'}
           </button>
           <button
             className="rounded-md bg-destructive px-3 py-2 text-sm text-white"

@@ -92,6 +92,21 @@ export const send = mutation({
   },
 })
 
+export const remove = mutation({
+  args: { chatId: v.id('chats') },
+  handler: async (ctx, args) => {
+    const chat = await requireOwnedChat(ctx, args.chatId)
+    const messages = await ctx.db
+      .query('messages')
+      .withIndex('by_chatId', (q) => q.eq('chatId', chat._id))
+      .take(200)
+
+    for (const message of messages) await ctx.db.delete(message._id)
+    await ctx.db.delete(chat._id)
+    return null
+  },
+})
+
 export const messages = query({
   args: { chatId: v.id('chats') },
   handler: async (ctx, args) => {

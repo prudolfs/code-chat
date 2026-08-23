@@ -484,31 +484,31 @@ MVP decisions:
 
 ### Phase 6: Chat
 
-- [ ] Implement chat creation mutation.
-- [ ] Require a project when creating a chat.
-- [ ] Implement recent chats query.
-- [ ] Implement chat messages query.
-- [ ] Implement bounded recent chat context query for answer generation, defaulting to 50 recent messages.
-- [ ] Implement save user message mutation.
-- [ ] Implement internal answer generation action.
-- [ ] Implement prompt construction with retrieved code context and bounded conversation context.
-- [ ] Call the LLM through Vercel AI SDK.
-- [ ] Add AI provider retry handling with up to 3 total attempts.
-- [ ] Return assistant responses after completion; do not implement token-by-token streaming in MVP.
-- [ ] Persist assistant messages with sources.
-- [ ] Persist assistant error messages or error state on failure.
-- [ ] Implement ChatGPT-style layout with sidebar, message list, source citations, input, send button, and loading state.
-- [ ] Add integration tests for chat creation, persistence, answer saving, and source display.
+- [x] Implement chat creation mutation.
+- [x] Require a project when creating a chat.
+- [x] Implement recent chats query.
+- [x] Implement chat messages query.
+- [x] Implement bounded recent chat context query for answer generation, defaulting to 50 recent messages.
+- [x] Implement save user message mutation.
+- [x] Implement internal answer generation action.
+- [x] Implement prompt construction with retrieved code context and bounded conversation context.
+- [x] Call the LLM through Vercel AI SDK.
+- [x] Add AI provider retry handling with up to 3 total attempts.
+- [x] Return assistant responses after completion; do not implement token-by-token streaming in MVP.
+- [x] Persist assistant messages with sources.
+- [x] Persist assistant error messages or error state on failure.
+- [x] Implement ChatGPT-style layout with sidebar, message list, source citations, input, send button, and loading state.
+- [x] Add integration tests for chat creation, persistence, answer saving, and source display.
 
 ### Phase 7: UX Completion
 
-- [ ] Add empty state for no projects.
-- [ ] Add project selector or project context display.
-- [ ] Add disabled chat input for projects that are not ready.
-- [ ] Add import error and warning messages that are useful but not overly technical.
-- [ ] Add delete project UI with confirmation warning that related chats and messages will also be deleted.
-- [ ] Add delete chat if included in MVP controls.
-- [ ] Verify responsive layout for desktop and mobile.
+- [x] Add empty state for no projects.
+- [x] Add project selector or project context display.
+- [x] Add disabled chat input for projects that are not ready.
+- [x] Add import error and warning messages that are useful but not overly technical.
+- [x] Add delete project UI with confirmation warning that related chats and messages will also be deleted.
+- [x] Add delete chat if included in MVP controls.
+- [x] Verify responsive layout for desktop and mobile.
 
 ### Phase 8: E2E and Quality Gates
 
