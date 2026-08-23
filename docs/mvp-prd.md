@@ -512,18 +512,18 @@ MVP decisions:
 
 ### Phase 8: E2E and Quality Gates
 
-- [ ] Add Playwright setup.
-- [ ] Add E2E test for authentication.
-- [ ] Add shippable happy-path E2E test using a configurable user, small predefined project upload, multiple questions, and returned answers.
-- [ ] Add E2E test for GitHub import or mocked GitHub boundary.
-- [ ] Add E2E test for chat navigation persistence.
-- [ ] Add predefined E2E users for normal happy-path testing.
-- [ ] Add predefined projects for deterministic E2E import.
-- [ ] Add CI script for type check, lint, format check, unit/integration tests, and E2E tests.
-- [ ] Run `pnpm check`.
-- [ ] Run unit and integration tests.
-- [ ] Run Playwright tests.
-- [ ] Document deferred cases and known limitations in the README.
+- [x] Add Playwright setup.
+- [x] Add E2E test for authentication.
+- [x] Add shippable happy-path E2E test using a configurable user, small predefined project upload, multiple questions, and returned answers.
+- [x] Add E2E test for GitHub import or mocked GitHub boundary.
+- [x] Add E2E test for chat navigation persistence.
+- [x] Add predefined E2E users for normal happy-path testing.
+- [x] Add predefined projects for deterministic E2E import.
+- [x] Add CI script for type check, lint, format check, unit/integration tests, and E2E tests.
+- [x] Run `pnpm check`.
+- [x] Run unit and integration tests.
+- [x] Run Playwright tests.
+- [x] Document deferred cases and known limitations in the README.
 
 ### Phase 9: README Media Script
 

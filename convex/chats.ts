@@ -21,6 +21,7 @@ import {
 } from './lib/auth'
 import { createGatewayEmbeddingProvider } from './lib/embeddings'
 import { convexProjectConfig } from './lib/project_config'
+import { e2eTestMode } from './lib/e2e'
 import {
   buildRetrievalContext,
   notEnoughIndexedContextMessage,
@@ -238,12 +239,17 @@ export const generateAnswer = internalAction({
         retrievedContext: retrieval.context,
         conversation,
       })
-      const gateway = createGateway({ apiKey: env.AI_GATEWAY_API_KEY })
-      const result = await generateText({
-        model: gateway.languageModel(convexProjectConfig.ai.chatModel),
-        prompt,
-        maxRetries: 2,
-      })
+      const answer = e2eTestMode
+        ? `Deterministic answer grounded in indexed code for: ${args.question}`
+        : (
+            await generateText({
+              model: createGateway({
+                apiKey: env.AI_GATEWAY_API_KEY,
+              }).languageModel(convexProjectConfig.ai.chatModel),
+              prompt,
+              maxRetries: 2,
+            })
+          ).text
       const sources = buildSourceCitations(retrieval.chunks).map((source) => ({
         ...source,
         chunkId: source.chunkId as Id<'chunks'>,
@@ -252,7 +258,7 @@ export const generateAnswer = internalAction({
       await ctx.runMutation(internal.chats.saveAssistantMessage, {
         chatId: chat._id,
         projectId: project._id,
-        content: result.text.trim() || notEnoughIndexedContextMessage,
+        content: answer.trim() || notEnoughIndexedContextMessage,
         sources,
       })
     } catch {

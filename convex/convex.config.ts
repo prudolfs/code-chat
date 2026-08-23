@@ -10,6 +10,7 @@ const app = defineApp({
     GOOGLE_CLIENT_SECRET: v.string(),
     GITHUB_CLIENT_ID: v.string(),
     GITHUB_CLIENT_SECRET: v.string(),
+    E2E_TEST_MODE: v.optional(v.string()),
     AI_GATEWAY_API_KEY: v.optional(v.string()),
     AI_GATEWAY_CHAT_MODEL: v.optional(v.string()),
     AI_GATEWAY_FALLBACK_CHAT_MODELS: v.optional(v.string()),

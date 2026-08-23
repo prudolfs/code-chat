@@ -1,4 +1,4 @@
-import { unzipSync } from 'fflate'
+import { unzipSync, zipSync } from 'fflate'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import {
@@ -11,6 +11,7 @@ import type { Id } from './_generated/dataModel'
 import { chunkFile } from '../src/lib/chunking'
 import { createGatewayEmbeddingProvider } from './lib/embeddings'
 import { convexProjectConfig } from './lib/project_config'
+import { e2eGitHubRepositoryUrl, e2eTestMode } from './lib/e2e'
 import {
   filterProjectFiles,
   validateProjectLimits,
@@ -56,7 +57,8 @@ export const setProgress = internalMutation({
     totalChunks: v.number(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.projectId, args)
+    const { projectId, ...progress } = args
+    await ctx.db.patch(projectId, progress)
   },
 })
 
@@ -260,6 +262,16 @@ async function downloadGitHubArchive(sourceUrl?: string) {
   const repository = parseGitHubRepository(sourceUrl)
   if (!repository) {
     throw new Error('Invalid GitHub URL')
+  }
+  if (e2eTestMode && repository.canonicalUrl === e2eGitHubRepositoryUrl) {
+    return zipSync({
+      'e2e-fixture/README.md': new TextEncoder().encode(
+        '# E2E GitHub Fixture\n\nA deterministic repository used by browser tests.',
+      ),
+      'e2e-fixture/src/index.ts': new TextEncoder().encode(
+        "export const source = 'mocked GitHub boundary'\n",
+      ),
+    })
   }
 
   const urls = [

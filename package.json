@@ -9,10 +9,13 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "lint": "oxlint . --fix",
+    "lint": "oxlint .",
     "format": "oxfmt . --write",
+    "format:check": "oxfmt . --check",
     "test": "vitest run",
-    "check": "tsc --noEmit && oxlint . --fix && oxfmt . --write",
+    "test:e2e": "node scripts/run-e2e.mjs",
+    "check": "tsc --noEmit && oxlint . && oxfmt . --check && vitest run",
+    "check:ci": "pnpm check && pnpm test:e2e",
     "types": "tsc --noEmit"
   },
   "dependencies": {
@@ -44,6 +47,7 @@
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

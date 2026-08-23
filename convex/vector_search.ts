@@ -3,6 +3,7 @@
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import { internalAction } from './_generated/server'
+import { e2eTestMode } from './lib/e2e'
 
 type SearchChunk = {
   id: string
@@ -20,6 +21,14 @@ export const searchChunks = internalAction({
     limit: v.number(),
   },
   handler: async (ctx, args): Promise<SearchChunk[]> => {
+    if (e2eTestMode) {
+      const chunks: Omit<SearchChunk, 'score'>[] = await ctx.runQuery(
+        internal.chunk_queries.loadProjectChunks,
+        { projectId: args.projectId, limit: args.limit },
+      )
+      return chunks.map((chunk) => ({ ...chunk, score: 1 }))
+    }
+
     const matches = await ctx.vectorSearch('chunks', 'by_embedding', {
       vector: args.embedding,
       limit: args.limit,

@@ -25,7 +25,7 @@ The MVP is a focused RAG application, not an autonomous coding agent. It does no
 - Convex
 - Better Auth
 - Vercel AI SDK with AI Gateway
-- Vitest, convex-test, oxlint, oxfmt, TypeScript
+- Vitest, convex-test, Playwright, oxlint, oxfmt, TypeScript
 
 ## Requirements
 
@@ -89,8 +89,10 @@ By default Vite serves the app on port `8080`.
 pnpm dev      # Start the local app server
 pnpm build    # Build the app
 pnpm test     # Run Vitest tests
+pnpm test:e2e # Run Playwright against the configured development deployment
 pnpm types    # Run TypeScript typecheck
-pnpm check    # Typecheck, lint/fix, and format
+pnpm check    # Typecheck, lint, format check, and unit/integration tests
+pnpm check:ci # Run the complete check plus Playwright
 ```
 
 ## Project Flow
@@ -113,6 +115,23 @@ pnpm test
 
 Current coverage includes ingestion utilities, retrieval context construction, chat prompt/source helpers, auth helpers, archive packaging, and Convex chat persistence.
 
+Run the browser suite with an isolated development or E2E Convex deployment:
+
+```sh
+pnpm test:e2e
+```
+
+The suite uses the predefined user settings in `.env.e2e.example`, the small
+project under `fixtures/ingestion/simple-react-project`, and a deterministic
+mocked GitHub repository boundary. The runner temporarily enables
+`E2E_TEST_MODE` in the selected Convex deployment and restores its previous
+value even when a test fails. Do not point this command at production.
+
+GitHub Actions expects a dedicated E2E deployment through
+`CONVEX_E2E_DEPLOY_KEY`, `E2E_VITE_CONVEX_URL`, and
+`E2E_VITE_CONVEX_SITE_URL` repository secrets. Optional E2E user secrets can
+override the committed non-production defaults.
+
 ## Documentation
 
 - [MVP PRD](docs/mvp-prd.md)
@@ -126,4 +145,11 @@ Current coverage includes ingestion utilities, retrieval context construction, c
 - Repository sync, webhooks, chat sharing, chat folders, and chat search are not implemented.
 - Assistant responses are non-streaming.
 - Citations are chunk-level approximate line ranges.
-- E2E tests and README media generation are planned in later phases.
+- Browser E2E authentication uses email/password; external Google and GitHub
+  consent screens are not automated.
+- The normal E2E suite mocks GitHub download, embedding, vector search scoring,
+  and LLM generation while preserving the real application and persistence
+  workflow.
+- Private repositories, repository sync, streaming, chat sharing, and chat
+  search remain out of scope.
+- README media generation remains planned for Phase 9.

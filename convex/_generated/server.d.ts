@@ -37,6 +37,7 @@ type Env = {
   readonly AI_GATEWAY_FALLBACK_CHAT_MODELS: string | undefined;
   readonly BETTER_AUTH_SECRET: string;
   readonly BETTER_AUTH_URL: string;
+  readonly E2E_TEST_MODE: string | undefined;
   readonly GITHUB_CLIENT_ID: string;
   readonly GITHUB_CLIENT_SECRET: string;
   readonly GOOGLE_CLIENT_ID: string;

@@ -27,3 +27,37 @@ export const loadChunks = internalQuery({
     )
   },
 })
+
+export const loadProjectChunks = internalQuery({
+  args: { projectId: v.id('projects'), limit: v.number() },
+  handler: async (ctx, args) => {
+    const chunks = await ctx.db
+      .query('chunks')
+      .withIndex('by_projectId', (q) => q.eq('projectId', args.projectId))
+      .take(args.limit)
+    const files = new Map(
+      (
+        await Promise.all(
+          chunks.map(async (chunk) => await ctx.db.get(chunk.fileId)),
+        )
+      )
+        .filter((file): file is NonNullable<typeof file> => file !== null)
+        .map((file) => [file._id, file]),
+    )
+
+    return chunks.flatMap((chunk) => {
+      const file = files.get(chunk.fileId)
+      return file
+        ? [
+            {
+              id: String(chunk._id),
+              path: file.path,
+              startLine: chunk.startLine,
+              endLine: chunk.endLine,
+              content: chunk.content,
+            },
+          ]
+        : []
+    })
+  },
+})

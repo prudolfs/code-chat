@@ -1,10 +1,20 @@
 import { createGateway } from '@ai-sdk/gateway'
 import { embed, embedMany } from 'ai'
-import type { EmbeddingProvider } from '../../shared/embeddings'
+import {
+  createDeterministicEmbeddingProvider,
+  type EmbeddingProvider,
+} from '../../shared/embeddings'
 import { convexProjectConfig } from './project_config'
+import { e2eTestMode } from './e2e'
 import { env } from '../_generated/server'
 
 export function createGatewayEmbeddingProvider(): EmbeddingProvider {
+  if (e2eTestMode) {
+    return createDeterministicEmbeddingProvider(
+      convexProjectConfig.ai.embeddingDimensions,
+    )
+  }
+
   const gateway = createGateway({ apiKey: env.AI_GATEWAY_API_KEY })
   const model = gateway.embeddingModel(convexProjectConfig.ai.embeddingModel)
 

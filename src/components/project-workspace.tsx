@@ -141,7 +141,11 @@ export function AuthForm() {
               required
             />
           </label>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          )}
           <button
             className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground"
             disabled={isSubmitting}

@@ -58,3 +58,14 @@ The chat model is intentionally cheap for development. `minimax/minimax-m3` and 
 - `RETRIEVAL_MAX_CONTEXT_CHARS`: `24000`
 - `RETRIEVAL_RECENT_MESSAGE_LIMIT`: `50`
 - `RETRIEVAL_MIN_RELEVANCE_SCORE`: `0.35`
+
+## E2E Environment
+
+Copy `.env.e2e.example` values into the test process when overrides are
+needed. The committed defaults define a non-production email/password user,
+local fixture project name, and local app URL.
+
+`pnpm test:e2e` temporarily sets `E2E_TEST_MODE=true` in the selected Convex
+deployment. In that mode only, external GitHub, embedding, vector scoring, and
+LLM boundaries are deterministic. The runner restores the previous deployment
+value in `finally`. Always use a development or dedicated E2E deployment.
