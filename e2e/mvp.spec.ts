@@ -136,7 +136,7 @@ function escapeRegex(value: string) {
 
 async function openSettledWorkspace(page: Page) {
   await page.goto('/app')
-  const projects = page.getByRole('heading', { name: 'Projects' })
+  const projects = page.getByRole('heading', { name: 'Projects', exact: true })
   const empty = page.getByRole('heading', { name: 'Import a project' })
   await expect(projects.or(empty)).toBeVisible()
   if (await projects.isVisible()) {

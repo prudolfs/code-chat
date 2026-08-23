@@ -18,4 +18,9 @@ test('signs in with the predefined E2E user', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'Your projects' }),
   ).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeHidden()
+  await expect(page.getByText(e2eUser.email, { exact: true })).toBeHidden()
+  await expect(page).toHaveURL(/\/sign-in$/)
 })

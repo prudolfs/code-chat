@@ -2,14 +2,34 @@
 
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { useMutation, useQuery } from 'convex/react'
-import { Trash2 } from 'lucide-react'
+import { useConvexAuth, useMutation, useQuery } from 'convex/react'
+import { LogOut, Trash2 } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { authClient } from '../lib/auth-client'
 import { signInSchema, signUpSchema } from '../lib/auth-validation'
 import { prepareProjectArchive } from '../lib/project-archive'
 import { parseGitHubRepository } from '../lib/github'
+import { cn } from '../lib/utils'
+import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog'
 
 export function AuthForm() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
@@ -240,6 +260,7 @@ export function ProjectHome({
   chatId?: Id<'chats'>
 }) {
   const navigate = useNavigate()
+  const { isAuthenticated } = useConvexAuth()
   const projects = useQuery(api.projects.list)
   const createProject = useMutation(api.projects.create)
   const generateUploadUrl = useMutation(api.projects.generateUploadUrl)
@@ -262,6 +283,7 @@ export function ProjectHome({
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const [showImportPanel, setShowImportPanel] = useState(false)
   const duplicate = useQuery(
     api.projects.findDuplicate,
@@ -375,45 +397,62 @@ export function ProjectHome({
     }
   }
 
+  async function signOut() {
+    setIsSigningOut(true)
+    try {
+      await authClient.signOut()
+    } catch {
+      setIsSigningOut(false)
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-muted/30 p-4 sm:p-6">
-      <section className="mx-auto flex max-w-5xl flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
+    <main className="grid h-dvh grid-rows-[4rem_minmax(0,1fr)] overflow-hidden bg-muted/30">
+      <header className="flex w-full items-center justify-between gap-4 border-b bg-background px-4 sm:px-6">
         <div>
-          <p className="text-sm text-muted-foreground">CodeChat</p>
-          <h1 className="text-2xl font-semibold">Your projects</h1>
+          <p className="text-xs font-medium text-muted-foreground">CodeChat</p>
+          <h1 className="text-lg font-semibold">Your projects</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="min-w-0 break-all">{email}</span>
-          <button
-            className="rounded-md border px-3 py-2"
-            type="button"
-            onClick={() => authClient.signOut()}
-          >
-            Sign out
-          </button>
-        </div>
-      </section>
+        {!isSigningOut && isAuthenticated && (
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <span className="hidden min-w-0 truncate text-muted-foreground sm:block">
+              {email}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Sign out"
+              title="Sign out"
+              onClick={() => void signOut()}
+            >
+              <LogOut aria-hidden="true" />
+            </Button>
+          </div>
+        )}
+      </header>
 
       {projects === undefined ? (
-        <section className="mx-auto max-w-6xl py-8 text-sm text-muted-foreground">
+        <div className="grid min-h-0 place-items-center text-sm text-muted-foreground">
           Loading projects...
-        </section>
+        </div>
       ) : projects.length === 0 ? (
-        <section className="mx-auto max-w-2xl py-8">
-          <ImportProjectPanel
-            error={error}
-            githubUrl={githubUrl}
-            isImporting={isImporting}
-            projectName={projectName}
-            selectedFiles={selectedFiles}
-            sourceType={sourceType}
-            onGithubUrlChange={setGithubUrl}
-            onProjectNameChange={setProjectName}
-            onSelectedFilesChange={setSelectedFiles}
-            onSourceTypeChange={setSourceType}
-            onSubmit={prepareImport}
-          />
-        </section>
+        <div className="min-h-0 overflow-y-auto p-4 sm:p-8">
+          <section className="mx-auto max-w-2xl">
+            <ImportProjectPanel
+              error={error}
+              githubUrl={githubUrl}
+              isImporting={isImporting}
+              projectName={projectName}
+              selectedFiles={selectedFiles}
+              sourceType={sourceType}
+              onGithubUrlChange={setGithubUrl}
+              onProjectNameChange={setProjectName}
+              onSelectedFilesChange={setSelectedFiles}
+              onSourceTypeChange={setSourceType}
+              onSubmit={prepareImport}
+            />
+          </section>
+        </div>
       ) : (
         <ChatWorkspace
           projects={projects}
@@ -432,15 +471,12 @@ export function ProjectHome({
         />
       )}
 
-      {projects && projects.length > 0 && showImportPanel && (
-        <div className="fixed inset-0 z-10 grid place-items-center bg-black/40 p-6">
-          <section
-            className="w-full max-w-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Add project"
-          >
+      {projects && projects.length > 0 && (
+        <Dialog open={showImportPanel} onOpenChange={setShowImportPanel}>
+          <DialogContent className="max-w-2xl p-0" showCloseButton={false}>
+            <DialogTitle className="sr-only">Add project</DialogTitle>
             <ImportProjectPanel
+              className="border-0 shadow-none"
               error={error}
               githubUrl={githubUrl}
               isImporting={isImporting}
@@ -454,85 +490,91 @@ export function ProjectHome({
               onSourceTypeChange={setSourceType}
               onSubmit={prepareImport}
             />
-          </section>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
-      {duplicate && pendingImport && (
-        <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-6">
-          <section
-            className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg"
-            role="dialog"
-            aria-modal="true"
-          >
-            <h2 className="text-lg font-semibold">Project already exists</h2>
-            <p className="text-sm text-muted-foreground">
+      <Dialog
+        open={Boolean(duplicate && pendingImport)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingImport(null)
+            setDuplicateRequest(null)
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Project already exists</DialogTitle>
+            <DialogDescription>
               Choose whether to create another project or replace the existing
-              index for {duplicate.name}.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                className="rounded-md border px-3 py-2 text-sm"
-                type="button"
-                disabled={isImporting}
-                onClick={() => completeImport('create')}
-              >
-                Create duplicate
-              </button>
-              <button
-                className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
-                type="button"
-                disabled={isImporting}
-                onClick={() => completeImport('replace')}
-              >
-                Replace and re-index
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+              index for {duplicate?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={isImporting}
+              onClick={() => completeImport('create')}
+            >
+              Create duplicate
+            </Button>
+            <Button
+              type="button"
+              disabled={isImporting}
+              onClick={() => completeImport('replace')}
+            >
+              Replace and re-index
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {duplicate === null && pendingImport && (
-        <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-6">
-          <section
-            className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg"
-            role="dialog"
-            aria-modal="true"
-          >
-            <h2 className="text-lg font-semibold">Ready to import</h2>
-            <p className="text-sm text-muted-foreground">
-              {pendingImport.name} is ready. Unsupported, ignored, or generated
+      <Dialog
+        open={duplicate === null && pendingImport !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingImport(null)
+            setDuplicateRequest(null)
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Ready to import</DialogTitle>
+            <DialogDescription>
+              {pendingImport?.name} is ready. Unsupported, ignored, or generated
               files will be skipped with warnings.
+            </DialogDescription>
+          </DialogHeader>
+          {pendingImport && pendingImport.warnings.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {pendingImport.warnings.length} files or limits will produce
+              warnings.
             </p>
-            {pendingImport.warnings.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {pendingImport.warnings.length} files or limits will produce
-                warnings.
-              </p>
-            )}
-            <div className="flex justify-end gap-3">
-              <button
-                className="rounded-md border px-3 py-2 text-sm"
-                type="button"
-                onClick={() => {
-                  setPendingImport(null)
-                  setDuplicateRequest(null)
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
-                type="button"
-                disabled={isImporting}
-                onClick={() => completeImport('create')}
-              >
-                Start indexing
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setPendingImport(null)
+                setDuplicateRequest(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isImporting}
+              onClick={() => completeImport('create')}
+            >
+              Start indexing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {projectDialog && (
         <WarningDialog
@@ -553,6 +595,7 @@ export function ProjectHome({
 }
 
 function ImportProjectPanel({
+  className,
   error,
   githubUrl,
   isImporting,
@@ -566,6 +609,7 @@ function ImportProjectPanel({
   onSourceTypeChange,
   onSubmit,
 }: {
+  className?: string
   error: string | null
   githubUrl: string
   isImporting: boolean
@@ -581,7 +625,10 @@ function ImportProjectPanel({
 }) {
   return (
     <form
-      className="grid gap-4 rounded-lg border bg-background p-5 shadow-sm"
+      className={cn(
+        'grid gap-4 rounded-lg border bg-background p-5 shadow-sm',
+        className,
+      )}
       onSubmit={onSubmit}
     >
       <div>
@@ -592,20 +639,20 @@ function ImportProjectPanel({
         </p>
       </div>
       <div className="flex gap-2" role="group" aria-label="Project source">
-        <button
-          className={`rounded-md px-3 py-2 text-sm ${sourceType === 'local' ? 'bg-primary text-primary-foreground' : 'border'}`}
+        <Button
+          variant={sourceType === 'local' ? 'default' : 'outline'}
           type="button"
           onClick={() => onSourceTypeChange('local')}
         >
           Local folder
-        </button>
-        <button
-          className={`rounded-md px-3 py-2 text-sm ${sourceType === 'github' ? 'bg-primary text-primary-foreground' : 'border'}`}
+        </Button>
+        <Button
+          variant={sourceType === 'github' ? 'default' : 'outline'}
           type="button"
           onClick={() => onSourceTypeChange('github')}
         >
           GitHub URL
-        </button>
+        </Button>
       </div>
       {sourceType === 'local' ? (
         <>
@@ -653,22 +700,18 @@ function ImportProjectPanel({
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-3">
         {onCancel && (
-          <button
-            className="rounded-md border px-4 py-2"
+          <Button
+            variant="outline"
             type="button"
             disabled={isImporting}
             onClick={onCancel}
           >
             Cancel
-          </button>
+          </Button>
         )}
-        <button
-          className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
-          type="submit"
-          disabled={isImporting}
-        >
+        <Button type="submit" disabled={isImporting}>
           {isImporting ? 'Starting import...' : 'Import project'}
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -707,6 +750,7 @@ function ChatWorkspace({
   const [question, setQuestion] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [chatToDelete, setChatToDelete] = useState<Id<'chats'> | null>(null)
   const createChat = useMutation(api.chats.create)
   const sendMessage = useMutation(api.chats.send)
   const removeChat = useMutation(api.chats.remove)
@@ -722,6 +766,7 @@ function ChatWorkspace({
     routeChatId && chats?.some((chat) => chat._id === routeChatId)
       ? routeChatId
       : null
+  const pendingDeleteChat = chats?.find((chat) => chat._id === chatToDelete)
   const messages = useQuery(
     api.chats.messages,
     selectedChatId ? { chatId: selectedChatId } : 'skip',
@@ -793,10 +838,12 @@ function ChatWorkspace({
     })
   }
 
-  async function deleteChat(chatId: Id<'chats'>) {
-    if (!window.confirm('Delete this chat and its messages?')) return
+  async function confirmDeleteChat() {
+    if (!chatToDelete) return
+    const chatId = chatToDelete
     setError(null)
     await removeChat({ chatId })
+    setChatToDelete(null)
     if (selectedChatId === chatId && selectedProject) {
       await navigate({
         to: '/app/projects/$projectId',
@@ -827,214 +874,254 @@ function ChatWorkspace({
   if (!selectedProject) return null
 
   return (
-    <section className="mx-auto grid max-w-6xl gap-4 py-8 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="flex min-w-0 flex-col overflow-hidden rounded-lg border bg-background lg:min-h-[40rem]">
-        <section className="border-b">
-          <div className="flex items-center justify-between gap-2 border-b p-4">
-            <h2 className="font-medium">Projects</h2>
-            <button
-              className="rounded-md border px-3 py-1.5 text-sm"
-              type="button"
-              onClick={onAddProject}
-            >
-              Add project
-            </button>
-          </div>
-          <div className="max-h-64 overflow-auto p-2">
-            {projects.map((project) => (
-              <div
-                className={`mb-2 flex min-w-0 items-center gap-1 rounded-md ${project._id === selectedProject._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
-                key={project._id}
-              >
-                <button
-                  className="min-w-0 flex-1 p-3 text-left text-sm"
-                  type="button"
-                  onClick={() =>
-                    navigate({
-                      to: '/app/projects/$projectId',
-                      params: { projectId: project._id },
-                    })
-                  }
-                >
-                  <span className="block font-medium break-words">
-                    {project.name}
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {project.sourceType} · {project.status}
-                  </span>
-                  {(project.status === 'indexing' ||
-                    project.status === 'pending') && (
-                    <span className="mt-2 block text-xs text-muted-foreground">
-                      Files {project.filesProcessed}/{project.totalFiles} ·
-                      Chunks {project.chunksEmbedded}/{project.totalChunks}
-                    </span>
-                  )}
-                  {project.status === 'error' && (
-                    <span className="mt-2 block text-xs text-destructive">
-                      {project.errorMessage}
-                    </span>
-                  )}
-                </button>
-                <button
-                  className="mr-2 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-destructive"
-                  type="button"
-                  aria-label={`Delete project ${project.name}`}
-                  title={`Delete project ${project.name}`}
-                  onClick={() => onDeleteProject(project._id)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
-          {selectedProject.status === 'ready_with_warnings' && (
-            <div className="border-t p-3">
+    <>
+      <section className="grid h-full min-h-0 w-full grid-rows-[minmax(12rem,40dvh)_minmax(0,1fr)] overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)] lg:grid-rows-1">
+        <aside className="min-h-0 min-w-0 overflow-y-auto border-b bg-sidebar text-sidebar-foreground lg:border-r lg:border-b-0">
+          <section className="border-b">
+            <div className="flex items-center justify-between gap-2 border-b p-4">
+              <h2 className="font-medium">Projects</h2>
               <button
-                className="w-full rounded-md border px-3 py-2 text-sm"
+                className="rounded-md border px-3 py-1.5 text-sm"
                 type="button"
-                onClick={() => onReviewWarnings(selectedProject._id)}
+                onClick={onAddProject}
               >
-                Warnings ({selectedProject.failedFiles.length})
+                Add project
               </button>
             </div>
-          )}
-        </section>
-
-        <section className="flex min-h-0 flex-1 flex-col">
-          <div className="flex items-center justify-between gap-2 border-b p-4">
-            <h2 className="font-medium">Chats</h2>
-            <button
-              className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
-              type="button"
-              disabled={!projectIsReady}
-              onClick={createNewChat}
-            >
-              New
-            </button>
-          </div>
-          <div className="max-h-64 flex-1 overflow-auto p-2 lg:max-h-none">
-            {chats?.map((chat) => (
-              <div
-                className={`mb-2 flex items-center gap-1 rounded-md ${chat._id === selectedChatId ? 'bg-muted' : 'hover:bg-muted/60'}`}
-                key={chat._id}
-              >
-                <button
-                  className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
-                  type="button"
-                  onClick={() =>
-                    navigate({
-                      to: '/app/projects/$projectId/chats/$chatId',
-                      params: {
-                        projectId: selectedProject._id,
-                        chatId: chat._id,
-                      },
-                    })
-                  }
+            <div className="p-2">
+              {projects.map((project) => (
+                <div
+                  className={`mb-2 flex min-w-0 items-center gap-1 rounded-md ${project._id === selectedProject._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                  key={project._id}
                 >
-                  <span className="block truncate">{chat.title}</span>
-                </button>
-                <button
-                  className="mr-2 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-destructive"
-                  type="button"
-                  aria-label={`Delete chat ${chat.title}`}
-                  title={`Delete chat ${chat.title}`}
-                  onClick={() => deleteChat(chat._id)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-            {chats?.length === 0 && (
-              <p className="p-2 text-sm text-muted-foreground">No chats yet.</p>
-            )}
-          </div>
-        </section>
-      </aside>
-
-      <section className="grid min-h-[40rem] min-w-0 grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border bg-background">
-        <header className="border-b p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="font-medium break-words">
-                {selectedProject?.name ?? 'Select a project'}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {selectedProject
-                  ? `${selectedProject.sourceType} project · ${projectStatusMessage(selectedProject)}`
-                  : 'Choose an indexed project to chat.'}
-              </p>
-            </div>
-            {selectedProject?.status === 'ready_with_warnings' && (
-              <button
-                className="w-fit rounded-md border px-3 py-2 text-sm"
-                type="button"
-                onClick={() => onReviewWarnings(selectedProject._id)}
-              >
-                Review warnings
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="space-y-4 overflow-auto p-4">
-          {!selectedChatId && projectIsReady && (
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
-              type="button"
-              onClick={createNewChat}
-            >
-              Start a chat
-            </button>
-          )}
-          {messages?.map((message) => (
-            <article
-              className={`max-w-full rounded-lg border p-3 text-sm sm:max-w-[85%] ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
-              key={message._id}
-            >
-              <p className="whitespace-pre-wrap">{message.content}</p>
-              {message.error && (
-                <p className="mt-2 text-xs text-destructive">{message.error}</p>
-              )}
-              {message.sources && message.sources.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {message.sources.map((source) => (
-                    <span
-                      className="rounded-md border bg-background px-2 py-1 text-xs text-foreground"
-                      key={`${message._id}-${source.path}-${source.startLine}`}
-                    >
-                      {source.path}:{source.startLine}-{source.endLine}
+                  <button
+                    className="min-w-0 flex-1 p-3 text-left text-sm"
+                    type="button"
+                    onClick={() =>
+                      navigate({
+                        to: '/app/projects/$projectId',
+                        params: { projectId: project._id },
+                      })
+                    }
+                  >
+                    <span className="block font-medium break-words">
+                      {project.name}
                     </span>
-                  ))}
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {project.sourceType} · {project.status}
+                    </span>
+                    {(project.status === 'indexing' ||
+                      project.status === 'pending') && (
+                      <span className="mt-2 block text-xs text-muted-foreground">
+                        Files {project.filesProcessed}/{project.totalFiles} ·
+                        Chunks {project.chunksEmbedded}/{project.totalChunks}
+                      </span>
+                    )}
+                    {project.status === 'error' && (
+                      <span className="mt-2 block text-xs text-destructive">
+                        {project.errorMessage}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    className="mr-2 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-destructive"
+                    type="button"
+                    aria-label={`Delete project ${project.name}`}
+                    title={`Delete project ${project.name}`}
+                    onClick={() => onDeleteProject(project._id)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </button>
                 </div>
-              )}
-            </article>
-          ))}
-          {pendingAssistant && selectedChatId && (
-            <p className="text-sm text-muted-foreground">Thinking...</p>
-          )}
-        </div>
+              ))}
+            </div>
+            {selectedProject.status === 'ready_with_warnings' && (
+              <div className="border-t p-3">
+                <button
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  type="button"
+                  onClick={() => onReviewWarnings(selectedProject._id)}
+                >
+                  Warnings ({selectedProject.failedFiles.length})
+                </button>
+              </div>
+            )}
+          </section>
 
-        <form className="border-t p-4" onSubmit={submitQuestion}>
-          {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
-          <div className="flex gap-2">
-            <input
-              className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
-              value={question}
-              disabled={inputDisabledReason !== null || isSending}
-              placeholder={inputDisabledReason ?? 'Ask about this codebase'}
-              onChange={(event) => setQuestion(event.target.value)}
-            />
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
-              type="submit"
-              disabled={inputDisabledReason !== null || isSending}
-            >
-              Send
-            </button>
+          <section>
+            <div className="flex items-center justify-between gap-2 border-b p-4">
+              <h2 className="font-medium">Chats</h2>
+              <button
+                className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+                type="button"
+                disabled={!projectIsReady}
+                onClick={createNewChat}
+              >
+                New
+              </button>
+            </div>
+            <div className="p-2">
+              {chats?.map((chat) => (
+                <div
+                  className={`mb-2 flex items-center gap-1 rounded-md ${chat._id === selectedChatId ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                  key={chat._id}
+                >
+                  <button
+                    className="min-w-0 flex-1 px-3 py-2 text-left text-sm"
+                    type="button"
+                    onClick={() =>
+                      navigate({
+                        to: '/app/projects/$projectId/chats/$chatId',
+                        params: {
+                          projectId: selectedProject._id,
+                          chatId: chat._id,
+                        },
+                      })
+                    }
+                  >
+                    <span className="block truncate">{chat.title}</span>
+                  </button>
+                  <button
+                    className="mr-2 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-destructive"
+                    type="button"
+                    aria-label={`Delete chat ${chat.title}`}
+                    title={`Delete chat ${chat.title}`}
+                    onClick={() => setChatToDelete(chat._id)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
+              {chats?.length === 0 && (
+                <p className="p-2 text-sm text-muted-foreground">
+                  No chats yet.
+                </p>
+              )}
+            </div>
+          </section>
+        </aside>
+
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background">
+          <header className="shrink-0 border-b px-4 py-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="font-medium break-words">
+                  {selectedProject?.name ?? 'Select a project'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProject
+                    ? `${selectedProject.sourceType} project · ${projectStatusMessage(selectedProject)}`
+                    : 'Choose an indexed project to chat.'}
+                </p>
+              </div>
+              {selectedProject?.status === 'ready_with_warnings' && (
+                <button
+                  className="w-fit rounded-md border px-3 py-2 text-sm"
+                  type="button"
+                  onClick={() => onReviewWarnings(selectedProject._id)}
+                >
+                  Review warnings
+                </button>
+              )}
+            </div>
+          </header>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6">
+              {!selectedChatId && projectIsReady && (
+                <button
+                  className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+                  type="button"
+                  onClick={createNewChat}
+                >
+                  Start a chat
+                </button>
+              )}
+              {messages?.map((message) => (
+                <article
+                  className={`max-w-full rounded-lg border p-3 text-sm sm:max-w-[85%] ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
+                  key={message._id}
+                >
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.error && (
+                    <p className="mt-2 text-xs text-destructive">
+                      {message.error}
+                    </p>
+                  )}
+                  {message.sources && message.sources.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {message.sources.map((source) => (
+                        <span
+                          className="rounded-md border bg-background px-2 py-1 text-xs text-foreground"
+                          key={`${message._id}-${source.path}-${source.startLine}`}
+                        >
+                          {source.path}:{source.startLine}-{source.endLine}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              ))}
+              {pendingAssistant && selectedChatId && (
+                <p className="text-sm text-muted-foreground">Thinking...</p>
+              )}
+            </div>
           </div>
-        </form>
+
+          <form
+            className="sticky bottom-0 z-10 shrink-0 border-t bg-background/95 px-4 py-3 backdrop-blur"
+            onSubmit={submitQuestion}
+          >
+            <div className="mx-auto w-full max-w-3xl">
+              {error && (
+                <p className="mb-2 text-sm text-destructive">{error}</p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
+                  value={question}
+                  disabled={inputDisabledReason !== null || isSending}
+                  placeholder={inputDisabledReason ?? 'Ask about this codebase'}
+                  onChange={(event) => setQuestion(event.target.value)}
+                />
+                <Button
+                  type="submit"
+                  disabled={inputDisabledReason !== null || isSending}
+                >
+                  Send
+                </Button>
+              </div>
+            </div>
+          </form>
+        </section>
       </section>
-    </section>
+
+      <AlertDialog
+        open={chatToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setChatToDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deleting {pendingDeleteChat?.title ?? 'this chat'} also removes
+              all of its messages. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => void confirmDeleteChat()}
+            >
+              Delete chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
@@ -1066,49 +1153,69 @@ function WarningDialog({
 }) {
   if (!project) return null
   const isWarningReview = mode === 'warnings'
-  return (
-    <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-6">
-      <section
-        className="max-h-[80vh] w-full max-w-lg space-y-4 overflow-auto rounded-lg border bg-background p-6 shadow-lg"
-        role="dialog"
-        aria-modal="true"
+  if (isWarningReview) {
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose()
+        }}
       >
-        <h2 className="text-lg font-semibold">
-          {isWarningReview
-            ? 'Project imported with warnings'
-            : 'Delete project?'}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {isWarningReview
-            ? 'Some files could not be indexed. You can proceed with the available context or delete this project.'
-            : `Deleting ${project.name} also removes its related chats, messages, files, and indexed chunks.`}
-        </p>
-        {isWarningReview && project.failedFiles.length > 0 && (
-          <ul className="max-h-48 space-y-1 overflow-auto rounded-md bg-muted p-3 text-sm">
-            {project.failedFiles.map((file) => (
-              <li key={`${file.path}-${file.reason}`}>
-                {file.path}: {file.reason}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex justify-end gap-3">
-          <button
-            className="rounded-md border px-3 py-2 text-sm"
-            type="button"
-            onClick={onClose}
-          >
-            {isWarningReview ? 'Proceed with warnings' : 'Cancel'}
-          </button>
-          <button
-            className="rounded-md bg-destructive px-3 py-2 text-sm text-white"
-            type="button"
-            onClick={onDelete}
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Project imported with warnings</DialogTitle>
+            <DialogDescription>
+              Some files could not be indexed. You can proceed with the
+              available context or delete this project.
+            </DialogDescription>
+          </DialogHeader>
+          {project.failedFiles.length > 0 && (
+            <ul className="max-h-48 space-y-1 overflow-auto rounded-md bg-muted p-3 text-sm">
+              {project.failedFiles.map((file) => (
+                <li key={`${file.path}-${file.reason}`}>
+                  {file.path}: {file.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            <Button variant="destructive" type="button" onClick={onDelete}>
+              Delete project
+            </Button>
+            <Button type="button" onClick={onClose}>
+              Proceed with warnings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return (
+    <AlertDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete project?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deleting {project.name} also removes its related chats, messages,
+            files, and indexed chunks. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => void onDelete()}
           >
             Delete project
-          </button>
-        </div>
-      </section>
-    </div>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
