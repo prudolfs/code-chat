@@ -1,8 +1,13 @@
+/* oxlint-disable no-underscore-dangle */
+
 import { api } from '../../convex/_generated/api'
-import { useQuery } from 'convex/react'
+import type { Id } from '../../convex/_generated/dataModel'
+import { useMutation, useQuery } from 'convex/react'
 import { FormEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { authClient } from '../lib/auth-client'
+import { prepareProjectArchive } from '../lib/project-archive'
+import { parseGitHubRepository } from '../lib/github'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -130,8 +135,136 @@ function AuthForm() {
   )
 }
 
+type PendingImport = {
+  name: string
+  sourceType: 'local' | 'github'
+  sourceUrl?: string
+  fingerprint?: string
+  archive?: Uint8Array
+  warnings: { path: string; reason: string }[]
+}
+
 function ProjectHome({ email }: { email: string }) {
   const projects = useQuery(api.projects.list)
+  const createProject = useMutation(api.projects.create)
+  const generateUploadUrl = useMutation(api.projects.generateUploadUrl)
+  const startImport = useMutation(api.projects.startImport)
+  const replaceProject = useMutation(api.projects.replace)
+  const removeProject = useMutation(api.projects.remove)
+  const [sourceType, setSourceType] = useState<'local' | 'github'>('local')
+  const [projectName, setProjectName] = useState('My project')
+  const [githubUrl, setGithubUrl] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null)
+  const [duplicateRequest, setDuplicateRequest] = useState<{
+    sourceType: 'local' | 'github'
+    sourceUrl?: string
+    fingerprint?: string
+  } | null>(null)
+  const [warningProjectId, setWarningProjectId] =
+    useState<Id<'projects'> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const duplicate = useQuery(
+    api.projects.findDuplicate,
+    duplicateRequest ?? 'skip',
+  )
+
+  async function prepareImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+
+    if (sourceType === 'github') {
+      const repository = parseGitHubRepository(githubUrl)
+      if (!repository) {
+        setError('Enter a valid public GitHub repository URL.')
+        return
+      }
+      const nextImport: PendingImport = {
+        name: repository.repository,
+        sourceType: 'github',
+        sourceUrl: repository.canonicalUrl,
+        warnings: [],
+      }
+      setPendingImport(nextImport)
+      setDuplicateRequest({
+        sourceType: 'github',
+        sourceUrl: repository.canonicalUrl,
+      })
+      return
+    }
+
+    if (selectedFiles.length === 0) {
+      setError('Choose a project folder first.')
+      return
+    }
+    const prepared = await prepareProjectArchive(selectedFiles)
+    const nextImport: PendingImport = {
+      name: projectName.trim() || 'Local project',
+      sourceType: 'local',
+      fingerprint: prepared.fingerprint,
+      archive: prepared.archive,
+      warnings: prepared.warnings,
+    }
+    setPendingImport(nextImport)
+    setDuplicateRequest({
+      sourceType: 'local',
+      fingerprint: prepared.fingerprint,
+    })
+  }
+
+  async function uploadArchive(archive: Uint8Array) {
+    const uploadUrl = await generateUploadUrl({})
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: archive.buffer as ArrayBuffer,
+      headers: { 'Content-Type': 'application/zip' },
+    })
+    if (!response.ok) {
+      throw new Error('Project upload failed')
+    }
+    const result: unknown = await response.json()
+    if (
+      !result ||
+      typeof result !== 'object' ||
+      !('storageId' in result) ||
+      typeof result.storageId !== 'string'
+    ) {
+      throw new Error('Project upload failed')
+    }
+    return result.storageId as never
+  }
+
+  async function completeImport(action: 'create' | 'replace') {
+    if (!pendingImport) return
+    setError(null)
+    try {
+      let projectId
+      if (action === 'replace' && duplicate) {
+        if (pendingImport.archive) {
+          const archiveStorageId = await uploadArchive(pendingImport.archive)
+          await replaceProject({ projectId: duplicate._id, archiveStorageId })
+        } else {
+          await replaceProject({ projectId: duplicate._id })
+        }
+      } else {
+        projectId = await createProject({
+          name: pendingImport.name,
+          sourceType: pendingImport.sourceType,
+          sourceUrl: pendingImport.sourceUrl,
+          fingerprint: pendingImport.fingerprint,
+        })
+        const archiveStorageId = pendingImport.archive
+          ? await uploadArchive(pendingImport.archive)
+          : undefined
+        await startImport({ projectId, archiveStorageId })
+      }
+      setPendingImport(null)
+      setDuplicateRequest(null)
+      setSelectedFiles([])
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Project import failed')
+    }
+  }
 
   return (
     <main className="min-h-screen bg-muted/30 p-6">
@@ -151,23 +284,278 @@ function ProjectHome({ email }: { email: string }) {
           </button>
         </div>
       </section>
-      <section className="mx-auto grid max-w-5xl gap-4 py-8 sm:grid-cols-2 lg:grid-cols-3">
+
+      <section className="mx-auto max-w-5xl py-8">
+        <form
+          className="grid gap-4 rounded-lg border bg-background p-5"
+          onSubmit={prepareImport}
+        >
+          <div className="flex gap-2" role="group" aria-label="Project source">
+            <button
+              className={`rounded-md px-3 py-2 text-sm ${sourceType === 'local' ? 'bg-primary text-primary-foreground' : 'border'}`}
+              type="button"
+              onClick={() => setSourceType('local')}
+            >
+              Local folder
+            </button>
+            <button
+              className={`rounded-md px-3 py-2 text-sm ${sourceType === 'github' ? 'bg-primary text-primary-foreground' : 'border'}`}
+              type="button"
+              onClick={() => setSourceType('github')}
+            >
+              GitHub URL
+            </button>
+          </div>
+          {sourceType === 'local' ? (
+            <>
+              <label className="grid gap-2 text-sm font-medium">
+                Project name
+                <input
+                  className="rounded-md border px-3 py-2"
+                  value={projectName}
+                  onChange={(event) => setProjectName(event.target.value)}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Project folder
+                <input
+                  {...({ webkitdirectory: '', directory: '' } as Record<
+                    string,
+                    string
+                  >)}
+                  className="rounded-md border px-3 py-2"
+                  type="file"
+                  multiple
+                  onChange={(event) =>
+                    setSelectedFiles(Array.from(event.target.files ?? []))
+                  }
+                />
+              </label>
+              {selectedFiles.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedFiles.length} files selected. Unsupported and ignored
+                  files will be skipped.
+                </p>
+              )}
+            </>
+          ) : (
+            <label className="grid gap-2 text-sm font-medium">
+              Public GitHub repository URL
+              <input
+                className="rounded-md border px-3 py-2"
+                value={githubUrl}
+                onChange={(event) => setGithubUrl(event.target.value)}
+                placeholder="https://github.com/owner/repository"
+              />
+            </label>
+          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <button
+            className="w-fit rounded-md bg-primary px-4 py-2 text-primary-foreground"
+            type="submit"
+          >
+            Import project
+          </button>
+        </form>
+      </section>
+
+      <section className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {projects?.map((project) => (
           <article
             className="rounded-lg border bg-background p-5"
-            // oxlint-disable-next-line no-underscore-dangle
             key={project._creationTime}
           >
-            <h2 className="font-medium">{project.name}</h2>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="font-medium">{project.name}</h2>
+              <span className="text-xs text-muted-foreground">
+                {project.status}
+              </span>
+            </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              {project.sourceType} · {project.status}
+              {project.sourceType}
             </p>
+            {(project.status === 'indexing' ||
+              project.status === 'pending') && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Files {project.filesProcessed}/{project.totalFiles} · Chunks{' '}
+                {project.chunksEmbedded}/{project.totalChunks}
+              </p>
+            )}
+            {project.status === 'ready_with_warnings' && (
+              <button
+                className="mt-4 rounded-md border px-3 py-2 text-sm"
+                type="button"
+                onClick={() => setWarningProjectId(project._id)}
+              >
+                Review warnings ({project.failedFiles.length})
+              </button>
+            )}
+            {project.status === 'error' && (
+              <p className="mt-3 text-sm text-destructive">
+                {project.errorMessage}
+              </p>
+            )}
+            <button
+              className="mt-4 rounded-md border px-3 py-2 text-sm"
+              type="button"
+              onClick={() => setWarningProjectId(project._id)}
+            >
+              Delete project
+            </button>
           </article>
         ))}
         {projects?.length === 0 && (
           <p className="text-muted-foreground">No projects yet.</p>
         )}
       </section>
+
+      {duplicate && pendingImport && (
+        <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
+          <section
+            className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2 className="text-lg font-semibold">Project already exists</h2>
+            <p className="text-sm text-muted-foreground">
+              Choose whether to create another project or replace the existing
+              index for {duplicate.name}.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="rounded-md border px-3 py-2 text-sm"
+                type="button"
+                onClick={() => completeImport('create')}
+              >
+                Create duplicate
+              </button>
+              <button
+                className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+                type="button"
+                onClick={() => completeImport('replace')}
+              >
+                Replace and re-index
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {duplicate === null && pendingImport && (
+        <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
+          <section
+            className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2 className="text-lg font-semibold">Ready to import</h2>
+            <p className="text-sm text-muted-foreground">
+              {pendingImport.name} is ready. Unsupported, ignored, or generated
+              files will be skipped with warnings.
+            </p>
+            {pendingImport.warnings.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {pendingImport.warnings.length} files or limits will produce
+                warnings.
+              </p>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                className="rounded-md border px-3 py-2 text-sm"
+                type="button"
+                onClick={() => {
+                  setPendingImport(null)
+                  setDuplicateRequest(null)
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+                type="button"
+                onClick={() => completeImport('create')}
+              >
+                Start indexing
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {warningProjectId && (
+        <WarningDialog
+          project={projects?.find((item) => item._id === warningProjectId)}
+          onClose={() => setWarningProjectId(null)}
+          onDelete={async () => {
+            await removeProject({ projectId: warningProjectId })
+            setWarningProjectId(null)
+          }}
+        />
+      )}
     </main>
+  )
+}
+
+function WarningDialog({
+  project,
+  onClose,
+  onDelete,
+}: {
+  project:
+    | {
+        name: string
+        failedFiles: { path: string; reason: string }[]
+      }
+    | undefined
+  onClose: () => void
+  onDelete: () => Promise<void>
+}) {
+  if (!project) return null
+  return (
+    <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
+      <section
+        className="max-h-[80vh] w-full max-w-lg space-y-4 overflow-auto rounded-lg border bg-background p-6 shadow-lg"
+        role="dialog"
+        aria-modal="true"
+      >
+        <h2 className="text-lg font-semibold">
+          {project.failedFiles.length > 0
+            ? 'Project imported with warnings'
+            : 'Delete project?'}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {project.failedFiles.length > 0
+            ? 'Some files could not be indexed. You can proceed with the available context or delete this project.'
+            : 'Deleting this project also removes its related chats and messages.'}
+        </p>
+        {project.failedFiles.length > 0 && (
+          <ul className="max-h-48 space-y-1 overflow-auto rounded-md bg-muted p-3 text-sm">
+            {project.failedFiles.map((file) => (
+              <li key={`${file.path}-${file.reason}`}>
+                {file.path}: {file.reason}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex justify-end gap-3">
+          <button
+            className="rounded-md border px-3 py-2 text-sm"
+            type="button"
+            onClick={onClose}
+          >
+            {project.failedFiles.length > 0
+              ? 'Proceed with warnings'
+              : 'Cancel'}
+          </button>
+          <button
+            className="rounded-md bg-destructive px-3 py-2 text-sm text-white"
+            type="button"
+            onClick={onDelete}
+          >
+            Delete project
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }

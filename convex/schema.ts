@@ -17,6 +17,14 @@ export default defineSchema({
     sourceUrl: v.optional(v.string()),
     fingerprint: v.optional(v.string()),
     status: projectStatus,
+    warnings: v.array(v.object({ path: v.string(), reason: v.string() })),
+    failedFiles: v.array(v.object({ path: v.string(), reason: v.string() })),
+    filesProcessed: v.number(),
+    totalFiles: v.number(),
+    chunksEmbedded: v.number(),
+    totalChunks: v.number(),
+    errorMessage: v.optional(v.string()),
+    archiveStorageId: v.optional(v.id('_storage')),
   })
     .index('by_ownerTokenIdentifier', ['ownerTokenIdentifier'])
     .index('by_ownerTokenIdentifier_and_sourceUrl', [

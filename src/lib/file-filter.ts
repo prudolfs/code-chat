@@ -16,6 +16,7 @@ export type FileRejectionReason =
   | 'file-too-large'
   | 'file-count-limit'
   | 'total-size-limit'
+  | 'chunk-count-limit'
 
 export type FilteredFile = IngestionFile & {
   normalizedPath: string

@@ -95,7 +95,7 @@ export type ProjectConfig = {
   auth: AuthConfig
 }
 
-export const projectConfig = buildProjectConfig()
+export const projectConfig: ProjectConfig = buildProjectConfig()
 
 export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
   return {
@@ -185,14 +185,7 @@ export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
 }
 
 function readRuntimeEnv(): EnvSource {
-  const viteEnv = (import.meta as ImportMeta & { env?: EnvSource }).env ?? {}
-  const nodeEnv =
-    typeof process === 'undefined' ? {} : (process.env as EnvSource)
-
-  return {
-    ...nodeEnv,
-    ...viteEnv,
-  }
+  return typeof process === 'undefined' ? {} : (process.env as EnvSource)
 }
 
 function readOptionalString(env: EnvSource, key: string) {

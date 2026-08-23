@@ -450,25 +450,25 @@ MVP decisions:
 
 ### Phase 4: Project Import
 
-- [ ] Implement create project mutation with initial status.
-- [ ] Implement duplicate project detection for GitHub URLs and best-effort local project fingerprints.
-- [ ] Add duplicate import prompt with create duplicate and replace/re-index actions.
-- [ ] Implement replace/re-index flow that clears prior files, chunks, embeddings, warnings, and failed file list before storing the new index.
-- [ ] Implement local folder picker and client-side filtering.
-- [ ] Implement client-side temporary archive creation for accepted local files.
-- [ ] Implement local archive upload/ingestion handoff.
-- [ ] Implement GitHub import form.
-- [ ] Implement internal action to download public GitHub repository ZIP.
-- [ ] Implement shared server-side extraction and ingestion action.
-- [ ] Implement internal mutations to persist files, chunks, embeddings, and project status.
-- [ ] Persist indexing progress updates for files processed and chunks embedded.
-- [ ] Ensure temporary archives are cleaned up after success and failure.
-- [ ] Add project status UI for pending, indexing, ready, ready with warnings, and error.
-- [ ] Add indexing progress UI for files processed and chunks embedded.
-- [ ] Add warning popup with generic message, failed file list, delete project action, and proceed with warnings action.
-- [ ] Implement delete project mutation scoped to the authenticated owner.
-- [ ] Query and delete related project chats, messages, files, and chunks when deleting a project.
-- [ ] Add integration tests for local and GitHub ingestion boundaries.
+- [x] Implement create project mutation with initial status.
+- [x] Implement duplicate project detection for GitHub URLs and best-effort local project fingerprints.
+- [x] Add duplicate import prompt with create duplicate and replace/re-index actions.
+- [x] Implement replace/re-index flow that clears prior files, chunks, embeddings, warnings, and failed file list before storing the new index.
+- [x] Implement local folder picker and client-side filtering.
+- [x] Implement client-side temporary archive creation for accepted local files.
+- [x] Implement local archive upload/ingestion handoff.
+- [x] Implement GitHub import form.
+- [x] Implement internal action to download public GitHub repository ZIP.
+- [x] Implement shared server-side extraction and ingestion action.
+- [x] Implement internal mutations to persist files, chunks, embeddings, and project status.
+- [x] Persist indexing progress updates for files processed and chunks embedded.
+- [x] Ensure temporary archives are cleaned up after success and failure.
+- [x] Add project status UI for pending, indexing, ready, ready with warnings, and error.
+- [x] Add indexing progress UI for files processed and chunks embedded.
+- [x] Add warning popup with generic message, failed file list, delete project action, and proceed with warnings action.
+- [x] Implement delete project mutation scoped to the authenticated owner.
+- [x] Query and delete related project chats, messages, files, and chunks when deleting a project.
+- [x] Add integration tests for local and GitHub ingestion boundaries.
 
 ### Phase 5: Embeddings and Retrieval
 
