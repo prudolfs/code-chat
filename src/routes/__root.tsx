@@ -1,18 +1,18 @@
 import type { ReactNode } from 'react'
 import { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext } from '@tanstack/react-router'
-import { Outlet, Scripts, HeadContent } from '@tanstack/react-router';
+import { Outlet, Scripts, HeadContent } from '@tanstack/react-router'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<{
-  queryClient: QueryClient;
+  queryClient: QueryClient
 }>()({
   head: () => ({
     meta: [
       {
         charSet: 'utf-8',
       },
-     {
+      {
         name: 'viewport',
         content:
           'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',

@@ -439,14 +439,14 @@ MVP decisions:
 
 ### Phase 3: Ingestion Core
 
-- [ ] Implement GitHub URL parsing and validation.
-- [ ] Implement path normalization.
-- [ ] Implement supported file and ignored directory filtering.
-- [ ] Implement file size, file count, and total size validation.
-- [ ] Implement binary/generated-file detection.
-- [ ] Implement deterministic chunking with start and end lines.
-- [ ] Implement chunk metadata construction.
-- [ ] Add unit tests for all ingestion utilities.
+- [x] Implement GitHub URL parsing and validation.
+- [x] Implement path normalization.
+- [x] Implement supported file and ignored directory filtering.
+- [x] Implement file size, file count, and total size validation.
+- [x] Implement binary/generated-file detection.
+- [x] Implement deterministic chunking with start and end lines.
+- [x] Implement chunk metadata construction.
+- [x] Add unit tests for all ingestion utilities.
 
 ### Phase 4: Project Import
 

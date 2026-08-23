@@ -8,12 +8,8 @@
     "strictNullChecks": true,
     "strict": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@convex/*": [
-        "./convex/*"
-      ]
+      "@/*": ["./src/*"],
+      "@convex/*": ["./convex/*"]
     }
   }
 }

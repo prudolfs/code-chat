@@ -52,7 +52,7 @@ export const defaultEmbeddingModel = 'openai/text-embedding-3-small'
 
 type EnvSource = Record<string, string | undefined>
 
-type IngestionConfig = {
+export type IngestionConfig = {
   maxAcceptedFiles: number
   maxAcceptedFileBytes: number
   maxTotalAcceptedTextBytes: number
@@ -61,14 +61,14 @@ type IngestionConfig = {
   ignoredDirectories: readonly string[]
 }
 
-type RetrievalConfig = {
+export type RetrievalConfig = {
   topK: number
   maxContextChars: number
   recentMessageLimit: number
   minRelevanceScore: number
 }
 
-type AiConfig = {
+export type AiConfig = {
   gatewayApiKeyEnvVar: 'AI_GATEWAY_API_KEY'
   chatModel: string
   fallbackChatModels: readonly string[]
@@ -76,7 +76,7 @@ type AiConfig = {
   embeddingDimensions: number
 }
 
-type AuthConfig = {
+export type AuthConfig = {
   requiredProviders: readonly ['email-password', 'google', 'github']
   envVars: {
     betterAuthSecret: 'BETTER_AUTH_SECRET'
@@ -100,7 +100,11 @@ export const projectConfig = buildProjectConfig()
 export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
   return {
     ingestion: {
-      maxAcceptedFiles: readPositiveInteger(env, 'PROJECT_MAX_ACCEPTED_FILES', 500),
+      maxAcceptedFiles: readPositiveInteger(
+        env,
+        'PROJECT_MAX_ACCEPTED_FILES',
+        500,
+      ),
       maxAcceptedFileBytes: readPositiveInteger(
         env,
         'PROJECT_MAX_ACCEPTED_FILE_BYTES',
@@ -149,15 +153,17 @@ export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
     },
     ai: {
       gatewayApiKeyEnvVar: 'AI_GATEWAY_API_KEY',
-      chatModel: readOptionalString(env, 'AI_GATEWAY_CHAT_MODEL')
-        ?? defaultCodingChatModel,
+      chatModel:
+        readOptionalString(env, 'AI_GATEWAY_CHAT_MODEL') ??
+        defaultCodingChatModel,
       fallbackChatModels: readCsvList(
         env,
         'AI_GATEWAY_FALLBACK_CHAT_MODELS',
         defaultCodingChatAlternatives,
       ),
-      embeddingModel: readOptionalString(env, 'AI_GATEWAY_EMBEDDING_MODEL')
-        ?? defaultEmbeddingModel,
+      embeddingModel:
+        readOptionalString(env, 'AI_GATEWAY_EMBEDDING_MODEL') ??
+        defaultEmbeddingModel,
       embeddingDimensions: readPositiveInteger(
         env,
         'AI_GATEWAY_EMBEDDING_DIMENSIONS',
@@ -224,11 +230,7 @@ function readNumberInRange(
     : fallback
 }
 
-function readCsvList(
-  env: EnvSource,
-  key: string,
-  fallback: readonly string[],
-) {
+function readCsvList(env: EnvSource, key: string, fallback: readonly string[]) {
   const value = readOptionalString(env, key)
 
   if (!value) {
