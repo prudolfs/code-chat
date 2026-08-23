@@ -27,6 +27,7 @@ import {
   notEnoughIndexedContextMessage,
 } from '../shared/retrieval'
 import { buildChatPrompt, buildSourceCitations } from '../shared/chat'
+import { isProviderRateLimitError } from '../shared/provider-errors'
 
 export const list = query({
   args: { projectId: v.id('projects') },
@@ -261,12 +262,15 @@ export const generateAnswer = internalAction({
         content: answer.trim() || notEnoughIndexedContextMessage,
         sources,
       })
-    } catch {
+    } catch (cause) {
+      console.error('Assistant response generation failed', cause)
       await saveAssistantError(
         ctx,
         chat._id,
         project._id,
-        'Assistant response failed. Please try again.',
+        isProviderRateLimitError(cause)
+          ? 'AI Gateway rate limit reached. Wait a minute and try again, or add AI Gateway credits.'
+          : 'Assistant response failed. Please try again.',
       )
     }
 

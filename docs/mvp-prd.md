@@ -338,7 +338,7 @@ MVP decisions:
 - Chat and embedding models are project configuration with environment-variable overrides.
 - Default supported extensions include web/source docs plus popular Python project files: `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md`, `.mdx`, `.css`, `.html`, `.yml`, `.yaml`, `.py`, `.pyi`, `.toml`, `.ini`, `.cfg`, `.txt`, `.rst`.
 - Default development limits should be conservative for Convex Free/Starter: 500 accepted files per project, 512 KiB max per accepted file, 20 MiB max total accepted text, and 1000 chunks per project.
-- Default retrieval limits should be top 8 chunks, 24,000 max retrieved-context characters, 50 recent chat messages, and a 0.35 minimum relevance score when the provider/vector API exposes a comparable score.
+- Default retrieval limits should be top 8 chunks, 24,000 max retrieved-context characters, 50 recent chat messages, and a 0.25 minimum relevance score when the provider/vector API exposes a comparable score.
 - Default chat model should be `alibaba/qwen3.7-flash` for cheap development, with `minimax/minimax-m3` and `moonshotai/kimi-k2.5` documented as configurable coding-oriented alternatives.
 - Default embedding model should be `openai/text-embedding-3-small` with 1536-dimensional vectors for a practical cost/quality/storage balance.
 - Unsupported and skipped files are ignored silently in the UI; only project-level blocking failures are shown.
@@ -416,7 +416,7 @@ MVP decisions:
 - [x] Set default ingestion limits to 500 accepted files, 512 KiB per accepted file, 20 MiB total accepted text, and 1000 chunks per project.
 - [x] Add project configuration for supported file extensions with environment-variable overrides.
 - [x] Set default supported extensions to `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md`, `.mdx`, `.css`, `.html`, `.yml`, `.yaml`, `.py`, `.pyi`, `.toml`, `.ini`, `.cfg`, `.txt`, `.rst`.
-- [x] Set default retrieval limits to top 8 chunks, 24,000 max retrieved-context characters, 50 recent chat messages, and 0.35 minimum relevance score where available.
+- [x] Set default retrieval limits to top 8 chunks, 24,000 max retrieved-context characters, 50 recent chat messages, and 0.25 minimum relevance score where available.
 - [x] Add project configuration for `AI_GATEWAY_CHAT_MODEL`, `AI_GATEWAY_EMBEDDING_MODEL`, optional fallback chat models, and embedding dimensions.
 - [x] Set default chat model to `alibaba/qwen3.7-flash`.
 - [x] Document `minimax/minimax-m3` and `moonshotai/kimi-k2.5` as configurable alternatives for better coding quality.
@@ -527,14 +527,14 @@ MVP decisions:
 
 ### Phase 9: README Media Script
 
-- [ ] Add standalone README GIF generator script outside the E2E test suite.
-- [ ] Add predefined GIF user for README media generation.
-- [ ] Add predefined projects for README GIF screenshots.
-- [ ] Capture the login screen screenshot.
-- [ ] Log in with the predefined GIF user.
-- [ ] Select predefined projects and capture three authenticated project screenshots.
-- [ ] Generate `readme.gif` in the project root from the four captured screenshots.
-- [ ] Clean temporary screenshot PNGs from `.temp` after `readme.gif` generation.
+- [x] Add standalone README GIF generator script outside the E2E test suite.
+- [x] Add predefined GIF user for README media generation.
+- [x] Add predefined projects for README GIF screenshots.
+- [x] Capture the login screen screenshot.
+- [x] Log in with the predefined GIF user.
+- [x] Select predefined projects and capture three authenticated project screenshots.
+- [x] Generate `readme.gif` in the project root from the four captured screenshots.
+- [x] Clean temporary screenshot PNGs from `.temp` after `readme.gif` generation.
 
 ## 12. Definition of Done
 

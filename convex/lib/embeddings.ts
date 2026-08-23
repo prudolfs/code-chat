@@ -8,6 +8,9 @@ import { convexProjectConfig } from './project_config'
 import { e2eTestMode } from './e2e'
 import { env } from '../_generated/server'
 
+const maxEmbeddingsPerBatch = 128
+const embeddingBatchDelayMs = 5_000
+
 export function createGatewayEmbeddingProvider(): EmbeddingProvider {
   if (e2eTestMode) {
     return createDeterministicEmbeddingProvider(
@@ -24,14 +27,27 @@ export function createGatewayEmbeddingProvider(): EmbeddingProvider {
       return validateDimensions(result.embedding)
     },
     async embedTexts(values) {
-      const result = await embedMany({
-        model,
-        values: [...values],
-        maxRetries: 2,
-      })
-      return result.embeddings.map(validateDimensions)
+      const embeddings: number[][] = []
+      for (
+        let start = 0;
+        start < values.length;
+        start += maxEmbeddingsPerBatch
+      ) {
+        if (start > 0) await wait(embeddingBatchDelayMs)
+        const result = await embedMany({
+          model,
+          values: values.slice(start, start + maxEmbeddingsPerBatch),
+          maxRetries: 2,
+        })
+        embeddings.push(...result.embeddings.map(validateDimensions))
+      }
+      return embeddings
     },
   }
+}
+
+async function wait(milliseconds: number) {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
 function validateDimensions(embedding: number[]) {

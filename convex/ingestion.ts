@@ -18,6 +18,7 @@ import {
   type IngestionFile,
 } from '../src/lib/file-filter'
 import { parseGitHubRepository } from '../src/lib/github'
+import { isProviderRateLimitError } from '../shared/provider-errors'
 
 export const getProject = internalQuery({
   args: { projectId: v.id('projects') },
@@ -186,10 +187,13 @@ export const run = internalAction({
 
       let filesProcessed = 0
       let chunksEmbedded = 0
-      for (const entry of limitedChunkedFiles) {
-        const embeddings = await embeddingProvider.embedTexts(
+      const embeddings = await embeddingProvider.embedTexts(
+        limitedChunkedFiles.flatMap((entry) =>
           entry.chunks.map((chunk) => chunk.content),
-        )
+        ),
+      )
+      let embeddingOffset = 0
+      for (const entry of limitedChunkedFiles) {
         const fileId = await ctx.runMutation(internal.ingestion.saveFile, {
           projectId: args.projectId,
           path: entry.file.normalizedPath,
@@ -206,12 +210,13 @@ export const run = internalAction({
             startLine: chunk.startLine,
             endLine: chunk.endLine,
             chunkIndex: chunk.chunkIndex,
-            embedding: embeddings[chunkIndex],
+            embedding: embeddings[embeddingOffset + chunkIndex],
           })
           chunksEmbedded += 1
         }
 
         filesProcessed += 1
+        embeddingOffset += entry.chunks.length
         await ctx.runMutation(internal.ingestion.setProgress, {
           projectId: args.projectId,
           filesProcessed,
@@ -230,10 +235,13 @@ export const run = internalAction({
         chunksEmbedded,
         totalChunks,
       })
-    } catch {
+    } catch (cause) {
+      console.error('Project indexing failed', cause)
       await ctx.runMutation(internal.ingestion.fail, {
         projectId: args.projectId,
-        errorMessage: 'Project indexing failed. Please try again.',
+        errorMessage: isProviderRateLimitError(cause)
+          ? 'AI Gateway rate limit reached during indexing. Wait a minute and retry, or add AI Gateway credits.'
+          : 'Project indexing failed. Please try again.',
       })
     } finally {
       if (archiveStorageId) {

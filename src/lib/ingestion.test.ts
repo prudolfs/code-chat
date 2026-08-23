@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import {
   defaultSupportedExtensions,
+  defaultIgnoredFilenames,
   buildProjectConfig,
 } from '../../shared/project-config'
 import { chunkFile } from './chunking'
@@ -50,6 +51,10 @@ test('filters supported files and ignored directories', () => {
     { path: 'assets/logo.svg', content: '<svg />' },
     config.ingestion,
   )
+  const lockfile = filterProjectFile(
+    { path: 'pnpm-lock.yaml', content: 'lockfileVersion: 9' },
+    config.ingestion,
+  )
 
   expect('file' in accepted).toBe(true)
   expect(ignored).toEqual({
@@ -61,8 +66,12 @@ test('filters supported files and ignored directories', () => {
   expect(unsupported).toEqual({
     rejection: { path: 'assets/logo.svg', reason: 'unsupported-extension' },
   })
+  expect(lockfile).toEqual({
+    rejection: { path: 'pnpm-lock.yaml', reason: 'ignored-file' },
+  })
   expect(config.ingestion.supportedExtensions).toContain('.py')
   expect(defaultSupportedExtensions).toContain('.tsx')
+  expect(defaultIgnoredFilenames).toContain('pnpm-lock.yaml')
 })
 
 test('detects binary and generated files', () => {

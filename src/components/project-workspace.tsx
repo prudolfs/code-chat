@@ -3,6 +3,7 @@
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useMutation, useQuery } from 'convex/react'
+import { Trash2 } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { authClient } from '../lib/auth-client'
@@ -261,6 +262,7 @@ export function ProjectHome({
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [showImportPanel, setShowImportPanel] = useState(false)
   const duplicate = useQuery(
     api.projects.findDuplicate,
     duplicateRequest ?? 'skip',
@@ -361,6 +363,7 @@ export function ProjectHome({
       setPendingImport(null)
       setDuplicateRequest(null)
       setSelectedFiles([])
+      setShowImportPanel(false)
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -391,95 +394,72 @@ export function ProjectHome({
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl py-8">
-        <form
-          className="grid gap-4 rounded-lg border bg-background p-5"
-          onSubmit={prepareImport}
-        >
-          <div className="flex gap-2" role="group" aria-label="Project source">
-            <button
-              className={`rounded-md px-3 py-2 text-sm ${sourceType === 'local' ? 'bg-primary text-primary-foreground' : 'border'}`}
-              type="button"
-              onClick={() => setSourceType('local')}
-            >
-              Local folder
-            </button>
-            <button
-              className={`rounded-md px-3 py-2 text-sm ${sourceType === 'github' ? 'bg-primary text-primary-foreground' : 'border'}`}
-              type="button"
-              onClick={() => setSourceType('github')}
-            >
-              GitHub URL
-            </button>
-          </div>
-          {sourceType === 'local' ? (
-            <>
-              <label className="grid gap-2 text-sm font-medium">
-                Project name
-                <input
-                  className="rounded-md border px-3 py-2"
-                  value={projectName}
-                  onChange={(event) => setProjectName(event.target.value)}
-                />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Project folder
-                <input
-                  {...({ webkitdirectory: '', directory: '' } as Record<
-                    string,
-                    string
-                  >)}
-                  className="rounded-md border px-3 py-2"
-                  type="file"
-                  multiple
-                  onChange={(event) =>
-                    setSelectedFiles(Array.from(event.target.files ?? []))
-                  }
-                />
-              </label>
-              {selectedFiles.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {selectedFiles.length} files selected. Unsupported and ignored
-                  files will be skipped.
-                </p>
-              )}
-            </>
-          ) : (
-            <label className="grid gap-2 text-sm font-medium">
-              Public GitHub repository URL
-              <input
-                className="rounded-md border px-3 py-2"
-                value={githubUrl}
-                onChange={(event) => setGithubUrl(event.target.value)}
-                placeholder="https://github.com/owner/repository"
-              />
-            </label>
-          )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <button
-            className="w-fit rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
-            type="submit"
-            disabled={isImporting}
-          >
-            {isImporting ? 'Starting import...' : 'Import project'}
-          </button>
-        </form>
-      </section>
+      {projects === undefined ? (
+        <section className="mx-auto max-w-6xl py-8 text-sm text-muted-foreground">
+          Loading projects...
+        </section>
+      ) : projects.length === 0 ? (
+        <section className="mx-auto max-w-2xl py-8">
+          <ImportProjectPanel
+            error={error}
+            githubUrl={githubUrl}
+            isImporting={isImporting}
+            projectName={projectName}
+            selectedFiles={selectedFiles}
+            sourceType={sourceType}
+            onGithubUrlChange={setGithubUrl}
+            onProjectNameChange={setProjectName}
+            onSelectedFilesChange={setSelectedFiles}
+            onSourceTypeChange={setSourceType}
+            onSubmit={prepareImport}
+          />
+        </section>
+      ) : (
+        <ChatWorkspace
+          projects={projects}
+          routeProjectId={routeProjectId}
+          routeChatId={routeChatId}
+          onAddProject={() => {
+            setError(null)
+            setShowImportPanel(true)
+          }}
+          onDeleteProject={(projectId) =>
+            setProjectDialog({ projectId, mode: 'delete' })
+          }
+          onReviewWarnings={(projectId) =>
+            setProjectDialog({ projectId, mode: 'warnings' })
+          }
+        />
+      )}
 
-      <ChatWorkspace
-        projects={projects}
-        routeProjectId={routeProjectId}
-        routeChatId={routeChatId}
-        onDeleteProject={(projectId) =>
-          setProjectDialog({ projectId, mode: 'delete' })
-        }
-        onReviewWarnings={(projectId) =>
-          setProjectDialog({ projectId, mode: 'warnings' })
-        }
-      />
+      {projects && projects.length > 0 && showImportPanel && (
+        <div className="fixed inset-0 z-10 grid place-items-center bg-black/40 p-6">
+          <section
+            className="w-full max-w-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add project"
+          >
+            <ImportProjectPanel
+              error={error}
+              githubUrl={githubUrl}
+              isImporting={isImporting}
+              projectName={projectName}
+              selectedFiles={selectedFiles}
+              sourceType={sourceType}
+              onCancel={() => setShowImportPanel(false)}
+              onGithubUrlChange={setGithubUrl}
+              onProjectNameChange={setProjectName}
+              onSelectedFilesChange={setSelectedFiles}
+              onSourceTypeChange={setSourceType}
+              onSubmit={prepareImport}
+            />
+          </section>
+        </div>
+      )}
 
       {duplicate && pendingImport && (
-        <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
+        <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-6">
           <section
             className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg"
             role="dialog"
@@ -513,7 +493,7 @@ export function ProjectHome({
       )}
 
       {duplicate === null && pendingImport && (
-        <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
+        <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-6">
           <section
             className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg"
             role="dialog"
@@ -572,6 +552,128 @@ export function ProjectHome({
   )
 }
 
+function ImportProjectPanel({
+  error,
+  githubUrl,
+  isImporting,
+  projectName,
+  selectedFiles,
+  sourceType,
+  onCancel,
+  onGithubUrlChange,
+  onProjectNameChange,
+  onSelectedFilesChange,
+  onSourceTypeChange,
+  onSubmit,
+}: {
+  error: string | null
+  githubUrl: string
+  isImporting: boolean
+  projectName: string
+  selectedFiles: File[]
+  sourceType: 'local' | 'github'
+  onCancel?: () => void
+  onGithubUrlChange: (value: string) => void
+  onProjectNameChange: (value: string) => void
+  onSelectedFilesChange: (files: File[]) => void
+  onSourceTypeChange: (sourceType: 'local' | 'github') => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>
+}) {
+  return (
+    <form
+      className="grid gap-4 rounded-lg border bg-background p-5 shadow-sm"
+      onSubmit={onSubmit}
+    >
+      <div>
+        <h2 className="text-lg font-semibold">Import a project</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Choose a local folder or public GitHub repository to start chatting
+          with your codebase.
+        </p>
+      </div>
+      <div className="flex gap-2" role="group" aria-label="Project source">
+        <button
+          className={`rounded-md px-3 py-2 text-sm ${sourceType === 'local' ? 'bg-primary text-primary-foreground' : 'border'}`}
+          type="button"
+          onClick={() => onSourceTypeChange('local')}
+        >
+          Local folder
+        </button>
+        <button
+          className={`rounded-md px-3 py-2 text-sm ${sourceType === 'github' ? 'bg-primary text-primary-foreground' : 'border'}`}
+          type="button"
+          onClick={() => onSourceTypeChange('github')}
+        >
+          GitHub URL
+        </button>
+      </div>
+      {sourceType === 'local' ? (
+        <>
+          <label className="grid gap-2 text-sm font-medium">
+            Project name
+            <input
+              className="rounded-md border px-3 py-2"
+              value={projectName}
+              onChange={(event) => onProjectNameChange(event.target.value)}
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Project folder
+            <input
+              {...({ webkitdirectory: '', directory: '' } as Record<
+                string,
+                string
+              >)}
+              className="rounded-md border px-3 py-2"
+              type="file"
+              multiple
+              onChange={(event) =>
+                onSelectedFilesChange(Array.from(event.target.files ?? []))
+              }
+            />
+          </label>
+          {selectedFiles.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {selectedFiles.length} files selected. Unsupported and ignored
+              files will be skipped.
+            </p>
+          )}
+        </>
+      ) : (
+        <label className="grid gap-2 text-sm font-medium">
+          Public GitHub repository URL
+          <input
+            className="rounded-md border px-3 py-2"
+            value={githubUrl}
+            onChange={(event) => onGithubUrlChange(event.target.value)}
+            placeholder="https://github.com/owner/repository"
+          />
+        </label>
+      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="flex justify-end gap-3">
+        {onCancel && (
+          <button
+            className="rounded-md border px-4 py-2"
+            type="button"
+            disabled={isImporting}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+          type="submit"
+          disabled={isImporting}
+        >
+          {isImporting ? 'Starting import...' : 'Import project'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 type ProjectSummary = {
   _id: Id<'projects'>
   _creationTime: number
@@ -590,12 +692,14 @@ function ChatWorkspace({
   projects,
   routeProjectId,
   routeChatId,
+  onAddProject,
   onDeleteProject,
   onReviewWarnings,
 }: {
-  projects: ProjectSummary[] | undefined
+  projects: ProjectSummary[]
   routeProjectId?: Id<'projects'>
   routeChatId?: Id<'chats'>
+  onAddProject: () => void
   onDeleteProject: (projectId: Id<'projects'>) => void
   onReviewWarnings: (projectId: Id<'projects'>) => void
 }) {
@@ -720,93 +824,84 @@ function ChatWorkspace({
     }
   }
 
-  if (projects === undefined) {
-    return (
-      <section className="mx-auto max-w-5xl text-sm text-muted-foreground">
-        Loading projects...
-      </section>
-    )
-  }
-
-  if (projects.length === 0) {
-    return (
-      <section className="mx-auto max-w-5xl rounded-lg border bg-background p-8">
-        <h2 className="text-lg font-semibold">No projects yet</h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Import a local folder or public GitHub repository to create an indexed
-          project. Chat opens after indexing finishes.
-        </p>
-      </section>
-    )
-  }
-
   if (!selectedProject) return null
 
   return (
-    <section className="mx-auto grid max-w-5xl gap-4 xl:grid-cols-[280px_1fr]">
-      <aside className="min-w-0 rounded-lg border bg-background">
-        <div className="border-b p-4">
-          <h2 className="font-medium">Projects</h2>
-        </div>
-        <div className="max-h-72 overflow-auto p-2 xl:max-h-[34rem]">
-          {projects.map((project) => (
+    <section className="mx-auto grid max-w-6xl gap-4 py-8 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <aside className="flex min-w-0 flex-col overflow-hidden rounded-lg border bg-background lg:min-h-[40rem]">
+        <section className="border-b">
+          <div className="flex items-center justify-between gap-2 border-b p-4">
+            <h2 className="font-medium">Projects</h2>
             <button
-              className={`mb-2 w-full min-w-0 rounded-md p-3 text-left text-sm ${project._id === selectedProject?._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
-              key={project._creationTime}
+              className="rounded-md border px-3 py-1.5 text-sm"
               type="button"
-              onClick={() =>
-                navigate({
-                  to: '/app/projects/$projectId',
-                  params: { projectId: project._id },
-                })
-              }
+              onClick={onAddProject}
             >
-              <span className="block font-medium break-words">
-                {project.name}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {project.sourceType} · {project.status}
-              </span>
-              {(project.status === 'indexing' ||
-                project.status === 'pending') && (
-                <span className="mt-2 block text-xs text-muted-foreground">
-                  Files {project.filesProcessed}/{project.totalFiles} · Chunks{' '}
-                  {project.chunksEmbedded}/{project.totalChunks}
-                </span>
-              )}
-              {project.status === 'error' && (
-                <span className="mt-2 block text-xs text-destructive">
-                  {project.errorMessage}
-                </span>
-              )}
+              Add project
             </button>
-          ))}
-        </div>
-        {selectedProject && (
-          <div className="space-y-2 border-t p-3">
-            {selectedProject.status === 'ready_with_warnings' && (
+          </div>
+          <div className="max-h-64 overflow-auto p-2">
+            {projects.map((project) => (
+              <div
+                className={`mb-2 flex min-w-0 items-center gap-1 rounded-md ${project._id === selectedProject._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                key={project._id}
+              >
+                <button
+                  className="min-w-0 flex-1 p-3 text-left text-sm"
+                  type="button"
+                  onClick={() =>
+                    navigate({
+                      to: '/app/projects/$projectId',
+                      params: { projectId: project._id },
+                    })
+                  }
+                >
+                  <span className="block font-medium break-words">
+                    {project.name}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {project.sourceType} · {project.status}
+                  </span>
+                  {(project.status === 'indexing' ||
+                    project.status === 'pending') && (
+                    <span className="mt-2 block text-xs text-muted-foreground">
+                      Files {project.filesProcessed}/{project.totalFiles} ·
+                      Chunks {project.chunksEmbedded}/{project.totalChunks}
+                    </span>
+                  )}
+                  {project.status === 'error' && (
+                    <span className="mt-2 block text-xs text-destructive">
+                      {project.errorMessage}
+                    </span>
+                  )}
+                </button>
+                <button
+                  className="mr-2 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-destructive"
+                  type="button"
+                  aria-label={`Delete project ${project.name}`}
+                  title={`Delete project ${project.name}`}
+                  onClick={() => onDeleteProject(project._id)}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+          {selectedProject.status === 'ready_with_warnings' && (
+            <div className="border-t p-3">
               <button
                 className="w-full rounded-md border px-3 py-2 text-sm"
                 type="button"
                 onClick={() => onReviewWarnings(selectedProject._id)}
               >
-                Review warnings ({selectedProject.failedFiles.length})
+                Warnings ({selectedProject.failedFiles.length})
               </button>
-            )}
-            <button
-              className="w-full rounded-md border px-3 py-2 text-sm"
-              type="button"
-              onClick={() => onDeleteProject(selectedProject._id)}
-            >
-              Delete project
-            </button>
-          </div>
-        )}
-      </aside>
+            </div>
+          )}
+        </section>
 
-      <section className="grid min-h-[36rem] min-w-0 overflow-hidden rounded-lg border bg-background lg:grid-cols-[220px_1fr]">
-        <aside className="border-b p-3 lg:border-r lg:border-b-0">
-          <div className="mb-3 flex items-center justify-between gap-2">
+        <section className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center justify-between gap-2 border-b p-4">
             <h2 className="font-medium">Chats</h2>
             <button
               className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
@@ -817,7 +912,7 @@ function ChatWorkspace({
               New
             </button>
           </div>
-          <div className="max-h-48 overflow-auto lg:max-h-[31rem]">
+          <div className="max-h-64 flex-1 overflow-auto p-2 lg:max-h-none">
             {chats?.map((chat) => (
               <div
                 className={`mb-2 flex items-center gap-1 rounded-md ${chat._id === selectedChatId ? 'bg-muted' : 'hover:bg-muted/60'}`}
@@ -839,106 +934,105 @@ function ChatWorkspace({
                   <span className="block truncate">{chat.title}</span>
                 </button>
                 <button
-                  className="mr-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
+                  className="mr-2 grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-destructive"
                   type="button"
-                  aria-label={`Delete ${chat.title}`}
+                  aria-label={`Delete chat ${chat.title}`}
+                  title={`Delete chat ${chat.title}`}
                   onClick={() => deleteChat(chat._id)}
                 >
-                  Delete
+                  <Trash2 className="size-4" aria-hidden="true" />
                 </button>
               </div>
             ))}
             {chats?.length === 0 && (
-              <p className="text-sm text-muted-foreground">No chats yet.</p>
+              <p className="p-2 text-sm text-muted-foreground">No chats yet.</p>
             )}
           </div>
-        </aside>
+        </section>
+      </aside>
 
-        <div className="grid min-h-[36rem] grid-rows-[auto_1fr_auto]">
-          <header className="border-b p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h2 className="font-medium break-words">
-                  {selectedProject?.name ?? 'Select a project'}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {selectedProject
-                    ? `${selectedProject.sourceType} project · ${projectStatusMessage(selectedProject)}`
-                    : 'Choose an indexed project to chat.'}
-                </p>
-              </div>
-              {selectedProject?.status === 'ready_with_warnings' && (
-                <button
-                  className="w-fit rounded-md border px-3 py-2 text-sm"
-                  type="button"
-                  onClick={() => onReviewWarnings(selectedProject._id)}
-                >
-                  Review warnings
-                </button>
-              )}
+      <section className="grid min-h-[40rem] min-w-0 grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border bg-background">
+        <header className="border-b p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="font-medium break-words">
+                {selectedProject?.name ?? 'Select a project'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {selectedProject
+                  ? `${selectedProject.sourceType} project · ${projectStatusMessage(selectedProject)}`
+                  : 'Choose an indexed project to chat.'}
+              </p>
             </div>
-          </header>
-
-          <div className="space-y-4 overflow-auto p-4">
-            {!selectedChatId && projectIsReady && (
+            {selectedProject?.status === 'ready_with_warnings' && (
               <button
-                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+                className="w-fit rounded-md border px-3 py-2 text-sm"
                 type="button"
-                onClick={createNewChat}
+                onClick={() => onReviewWarnings(selectedProject._id)}
               >
-                Start a chat
+                Review warnings
               </button>
-            )}
-            {messages?.map((message) => (
-              <article
-                className={`max-w-full rounded-lg border p-3 text-sm sm:max-w-[85%] ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
-                key={message._id}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                {message.error && (
-                  <p className="mt-2 text-xs text-destructive">
-                    {message.error}
-                  </p>
-                )}
-                {message.sources && message.sources.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {message.sources.map((source) => (
-                      <span
-                        className="rounded-md border bg-background px-2 py-1 text-xs text-foreground"
-                        key={`${message._id}-${source.path}-${source.startLine}`}
-                      >
-                        {source.path}:{source.startLine}-{source.endLine}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </article>
-            ))}
-            {pendingAssistant && selectedChatId && (
-              <p className="text-sm text-muted-foreground">Thinking...</p>
             )}
           </div>
+        </header>
 
-          <form className="border-t p-4" onSubmit={submitQuestion}>
-            {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
-            <div className="flex gap-2">
-              <input
-                className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
-                value={question}
-                disabled={inputDisabledReason !== null || isSending}
-                placeholder={inputDisabledReason ?? 'Ask about this codebase'}
-                onChange={(event) => setQuestion(event.target.value)}
-              />
-              <button
-                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
-                type="submit"
-                disabled={inputDisabledReason !== null || isSending}
-              >
-                Send
-              </button>
-            </div>
-          </form>
+        <div className="space-y-4 overflow-auto p-4">
+          {!selectedChatId && projectIsReady && (
+            <button
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+              type="button"
+              onClick={createNewChat}
+            >
+              Start a chat
+            </button>
+          )}
+          {messages?.map((message) => (
+            <article
+              className={`max-w-full rounded-lg border p-3 text-sm sm:max-w-[85%] ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
+              key={message._id}
+            >
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.error && (
+                <p className="mt-2 text-xs text-destructive">{message.error}</p>
+              )}
+              {message.sources && message.sources.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {message.sources.map((source) => (
+                    <span
+                      className="rounded-md border bg-background px-2 py-1 text-xs text-foreground"
+                      key={`${message._id}-${source.path}-${source.startLine}`}
+                    >
+                      {source.path}:{source.startLine}-{source.endLine}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
+          {pendingAssistant && selectedChatId && (
+            <p className="text-sm text-muted-foreground">Thinking...</p>
+          )}
         </div>
+
+        <form className="border-t p-4" onSubmit={submitQuestion}>
+          {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
+          <div className="flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
+              value={question}
+              disabled={inputDisabledReason !== null || isSending}
+              placeholder={inputDisabledReason ?? 'Ask about this codebase'}
+              onChange={(event) => setQuestion(event.target.value)}
+            />
+            <button
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+              type="submit"
+              disabled={inputDisabledReason !== null || isSending}
+            >
+              Send
+            </button>
+          </div>
+        </form>
       </section>
     </section>
   )
@@ -973,7 +1067,7 @@ function WarningDialog({
   if (!project) return null
   const isWarningReview = mode === 'warnings'
   return (
-    <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
+    <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-6">
       <section
         className="max-h-[80vh] w-full max-w-lg space-y-4 overflow-auto rounded-lg border bg-background p-6 shadow-lg"
         role="dialog"

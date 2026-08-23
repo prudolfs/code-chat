@@ -10,6 +10,7 @@ export type IngestionFile = {
 export type FileRejectionReason =
   | 'invalid-path'
   | 'ignored-directory'
+  | 'ignored-file'
   | 'unsupported-extension'
   | 'binary-content'
   | 'generated-file'
@@ -49,6 +50,11 @@ export function filterProjectFile(
     pathSegments.some((segment) => config.ignoredDirectories.includes(segment))
   ) {
     return { rejection: { path: file.path, reason: 'ignored-directory' } }
+  }
+
+  const filename = pathSegments.at(-1)?.toLowerCase()
+  if (filename && config.ignoredFilenames.includes(filename)) {
+    return { rejection: { path: file.path, reason: 'ignored-file' } }
   }
 
   const extension = getExtension(normalizedPath)

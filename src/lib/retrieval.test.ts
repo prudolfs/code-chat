@@ -7,6 +7,7 @@ import {
   buildRetrievalContext,
   notEnoughIndexedContextMessage,
 } from '../../shared/retrieval'
+import { isProviderRateLimitError } from '../../shared/provider-errors'
 
 test('deterministic fake embeddings are stable and normalized', async () => {
   const provider = createDeterministicEmbeddingProvider(8)
@@ -73,4 +74,13 @@ test('retrieval returns the explicit fallback when nothing meets the threshold',
   )
 
   expect(result).toEqual({ chunks: [], context: '', hasEnoughContext: false })
+})
+
+test('recognizes nested provider rate-limit errors', () => {
+  expect(
+    isProviderRateLimitError({
+      lastError: { statusCode: 429, type: 'rate_limit_exceeded' },
+    }),
+  ).toBe(true)
+  expect(isProviderRateLimitError(new Error('Network unavailable'))).toBe(false)
 })

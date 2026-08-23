@@ -6,6 +6,7 @@ test('prepares a filtered local archive and reports skipped files', async () => 
   const files = [
     new File(['export const app = true'], 'src/app.ts'),
     new File(['ignored dependency'], 'node_modules/pkg/index.js'),
+    new File(['lockfileVersion: 9'], 'pnpm-lock.yaml'),
     new File(['<svg />'], 'assets/logo.svg'),
   ]
 
@@ -16,6 +17,7 @@ test('prepares a filtered local archive and reports skipped files', async () => 
   expect(prepared.acceptedFileCount).toBe(1)
   expect(prepared.warnings).toEqual([
     { path: 'node_modules/pkg/index.js', reason: 'ignored-directory' },
+    { path: 'pnpm-lock.yaml', reason: 'ignored-file' },
     { path: 'assets/logo.svg', reason: 'unsupported-extension' },
   ])
   expect(prepared.fingerprint).toMatch(/^[0-9a-f]{64}$/)

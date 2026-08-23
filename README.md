@@ -4,6 +4,8 @@ CodeChat is a full-stack code documentation assistant. An authenticated user can
 
 The MVP is a focused RAG application, not an autonomous coding agent. It does not edit code or sync repositories continuously.
 
+![CodeChat sign-in and project workspaces](readme.gif)
+
 ## Features
 
 - Email/password, Google, and GitHub authentication through Better Auth and Convex.
@@ -90,6 +92,7 @@ pnpm dev      # Start the local app server
 pnpm build    # Build the app
 pnpm test     # Run Vitest tests
 pnpm test:e2e # Run Playwright against the configured development deployment
+pnpm readme:gif # Regenerate the README walkthrough GIF
 pnpm types    # Run TypeScript typecheck
 pnpm check    # Typecheck, lint, format check, and unit/integration tests
 pnpm check:ci # Run the complete check plus Playwright
@@ -132,6 +135,20 @@ GitHub Actions expects a dedicated E2E deployment through
 `E2E_VITE_CONVEX_SITE_URL` repository secrets. Optional E2E user secrets can
 override the committed non-production defaults.
 
+Generate the README walkthrough from the predefined media user and three fixture
+projects:
+
+```sh
+pnpm readme:gif
+```
+
+The standalone generator starts the development server when needed, captures
+the sign-in screen and three authenticated project views, writes `readme.gif`
+at the project root, removes its temporary PNGs from `.temp`, and restores the
+deployment's prior `E2E_TEST_MODE` value. It uses non-production defaults that
+can be overridden with the `README_GIF_*` values in `.env.e2e.example`. Do not
+run it against production.
+
 ## Documentation
 
 - [MVP PRD](docs/mvp-prd.md)
@@ -152,4 +169,3 @@ override the committed non-production defaults.
   workflow.
 - Private repositories, repository sync, streaming, chat sharing, and chat
   search remain out of scope.
-- README media generation remains planned for Phase 9.

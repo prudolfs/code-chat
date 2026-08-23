@@ -41,6 +41,21 @@ export const defaultIgnoredDirectories = [
   'vendor',
 ] as const
 
+export const defaultIgnoredFilenames = [
+  'pnpm-lock.yaml',
+  'package-lock.json',
+  'yarn.lock',
+  'bun.lock',
+  'bun.lockb',
+  'cargo.lock',
+  'composer.lock',
+  'gemfile.lock',
+  'poetry.lock',
+  'uv.lock',
+  'pipfile.lock',
+  'go.sum',
+] as const
+
 export const defaultCodingChatModel = 'alibaba/qwen3.7-flash'
 
 export const defaultCodingChatAlternatives = [
@@ -59,6 +74,7 @@ export type IngestionConfig = {
   maxChunksPerProject: number
   supportedExtensions: readonly string[]
   ignoredDirectories: readonly string[]
+  ignoredFilenames: readonly string[]
 }
 
 export type RetrievalConfig = {
@@ -130,6 +146,11 @@ export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
         'PROJECT_IGNORED_DIRECTORIES',
         defaultIgnoredDirectories,
       ),
+      ignoredFilenames: readCsvList(
+        env,
+        'PROJECT_IGNORED_FILENAMES',
+        defaultIgnoredFilenames,
+      ).map((filename) => filename.toLowerCase()),
     },
     retrieval: {
       topK: readPositiveInteger(env, 'RETRIEVAL_TOP_K', 8),
@@ -146,7 +167,7 @@ export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
       minRelevanceScore: readNumberInRange(
         env,
         'RETRIEVAL_MIN_RELEVANCE_SCORE',
-        0.35,
+        0.25,
         0,
         1,
       ),

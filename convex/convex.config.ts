@@ -22,6 +22,7 @@ const app = defineApp({
     PROJECT_MAX_CHUNKS_PER_PROJECT: v.optional(v.string()),
     PROJECT_SUPPORTED_EXTENSIONS: v.optional(v.string()),
     PROJECT_IGNORED_DIRECTORIES: v.optional(v.string()),
+    PROJECT_IGNORED_FILENAMES: v.optional(v.string()),
     RETRIEVAL_TOP_K: v.optional(v.string()),
     RETRIEVAL_MAX_CONTEXT_CHARS: v.optional(v.string()),
     RETRIEVAL_RECENT_MESSAGE_LIMIT: v.optional(v.string()),

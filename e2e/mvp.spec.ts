@@ -9,6 +9,7 @@ test('imports a local fixture and returns cited answers to multiple questions', 
   page,
 }) => {
   await openSettledWorkspace(page)
+  await openImportPanel(page)
   await page.getByLabel('Project name').fill(e2eProjects.local.name)
   await page
     .getByLabel('Project folder')
@@ -54,6 +55,7 @@ test('imports the mocked GitHub fixture and answers from it', async ({
   page,
 }) => {
   await openSettledWorkspace(page)
+  await openImportPanel(page)
   await page.getByRole('button', { name: 'GitHub URL' }).click()
   await page
     .getByLabel('Public GitHub repository URL')
@@ -135,12 +137,19 @@ function escapeRegex(value: string) {
 async function openSettledWorkspace(page: Page) {
   await page.goto('/app')
   const projects = page.getByRole('heading', { name: 'Projects' })
-  const empty = page.getByRole('heading', { name: 'No projects yet' })
+  const empty = page.getByRole('heading', { name: 'Import a project' })
   await expect(projects.or(empty)).toBeVisible()
   if (await projects.isVisible()) {
     await expect(page).toHaveURL(/\/app\/projects\//)
     await waitForStableUrl(page)
   }
+}
+
+async function openImportPanel(page: Page) {
+  const projectName = page.getByLabel('Project name')
+  if (await projectName.isVisible()) return
+  await page.getByRole('button', { name: 'Add project' }).click()
+  await expect(projectName).toBeVisible()
 }
 
 async function waitForStableUrl(page: Page) {

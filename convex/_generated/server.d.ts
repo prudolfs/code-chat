@@ -43,6 +43,7 @@ type Env = {
   readonly GOOGLE_CLIENT_ID: string;
   readonly GOOGLE_CLIENT_SECRET: string;
   readonly PROJECT_IGNORED_DIRECTORIES: string | undefined;
+  readonly PROJECT_IGNORED_FILENAMES: string | undefined;
   readonly PROJECT_MAX_ACCEPTED_FILES: string | undefined;
   readonly PROJECT_MAX_ACCEPTED_FILE_BYTES: string | undefined;
   readonly PROJECT_MAX_CHUNKS_PER_PROJECT: string | undefined;
