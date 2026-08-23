@@ -472,15 +472,15 @@ MVP decisions:
 
 ### Phase 5: Embeddings and Retrieval
 
-- [ ] Add embedding provider wrapper behind a small module interface.
-- [ ] Generate and store embeddings for chunks during ingestion.
-- [ ] Implement question embedding generation.
-- [ ] Implement Convex vector search for top relevant chunks.
-- [ ] Define a retrieval relevance threshold for deciding when context is too weak.
-- [ ] Enforce top-K and context-size limits.
-- [ ] Return an "I don't have enough indexed context" response when retrieval is empty or below threshold.
-- [ ] Add deterministic fake embedding/retrieval utilities for tests.
-- [ ] Add tests for retrieval input construction and context limiting.
+- [x] Add embedding provider wrapper behind a small module interface.
+- [x] Generate and store embeddings for chunks during ingestion.
+- [x] Implement question embedding generation.
+- [x] Implement Convex vector search for top relevant chunks.
+- [x] Define a retrieval relevance threshold for deciding when context is too weak.
+- [x] Enforce top-K and context-size limits.
+- [x] Return an "I don't have enough indexed context" response when retrieval is empty or below threshold.
+- [x] Add deterministic fake embedding/retrieval utilities for tests.
+- [x] Add tests for retrieval input construction and context limiting.
 
 ### Phase 6: Chat
 

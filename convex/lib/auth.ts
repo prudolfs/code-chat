@@ -1,9 +1,11 @@
 import type { Doc, Id } from '../_generated/dataModel'
-import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { ActionCtx, MutationCtx, QueryCtx } from '../_generated/server'
 
 type AuthCtx = QueryCtx | MutationCtx
 
-export async function requireIdentity(ctx: AuthCtx) {
+type IdentityCtx = ActionCtx | AuthCtx
+
+export async function requireIdentity(ctx: IdentityCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
     throw new Error('Unauthenticated')

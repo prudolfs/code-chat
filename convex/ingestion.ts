@@ -9,6 +9,7 @@ import {
 import type { ActionCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { chunkFile } from '../src/lib/chunking'
+import { createGatewayEmbeddingProvider } from './lib/embeddings'
 import {
   filterProjectFiles,
   validateProjectLimits,
@@ -41,6 +42,7 @@ export const saveChunk = internalMutation({
     startLine: v.number(),
     endLine: v.number(),
     chunkIndex: v.number(),
+    embedding: v.optional(v.array(v.number())),
   },
   handler: async (ctx, args) => await ctx.db.insert('chunks', args),
 })
@@ -109,6 +111,7 @@ export const run = internalAction({
       if (!project) {
         throw new Error('Project not found')
       }
+      const embeddingProvider = createGatewayEmbeddingProvider()
 
       const archive = archiveStorageId
         ? await readStoredArchive(ctx, archiveStorageId)
@@ -182,6 +185,9 @@ export const run = internalAction({
       let filesProcessed = 0
       let chunksEmbedded = 0
       for (const entry of limitedChunkedFiles) {
+        const embeddings = await embeddingProvider.embedTexts(
+          entry.chunks.map((chunk) => chunk.content),
+        )
         const fileId = await ctx.runMutation(internal.ingestion.saveFile, {
           projectId: args.projectId,
           path: entry.file.normalizedPath,
@@ -190,7 +196,7 @@ export const run = internalAction({
           sizeBytes: entry.file.sizeBytes,
         })
 
-        for (const chunk of entry.chunks) {
+        for (const [chunkIndex, chunk] of entry.chunks.entries()) {
           await ctx.runMutation(internal.ingestion.saveChunk, {
             projectId: args.projectId,
             fileId,
@@ -198,6 +204,7 @@ export const run = internalAction({
             startLine: chunk.startLine,
             endLine: chunk.endLine,
             chunkIndex: chunk.chunkIndex,
+            embedding: embeddings[chunkIndex],
           })
           chunksEmbedded += 1
         }

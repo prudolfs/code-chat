@@ -16,6 +16,7 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "4.0.54",
     "@ai-sdk/react": "^4.0.71",
     "@base-ui/react": "^1.7.0",
     "@convex-dev/better-auth": "^0.12.5",
