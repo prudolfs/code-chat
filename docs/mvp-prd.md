@@ -412,19 +412,19 @@ MVP decisions:
 
 ### Phase 1: Foundation
 
-- [ ] Add project configuration for ingestion and retrieval limits with environment-variable overrides.
-- [ ] Set default ingestion limits to 500 accepted files, 512 KiB per accepted file, 20 MiB total accepted text, and 1000 chunks per project.
-- [ ] Add project configuration for supported file extensions with environment-variable overrides.
-- [ ] Set default supported extensions to `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md`, `.mdx`, `.css`, `.html`, `.yml`, `.yaml`, `.py`, `.pyi`, `.toml`, `.ini`, `.cfg`, `.txt`, `.rst`.
-- [ ] Set default retrieval limits to top 8 chunks, 24,000 max retrieved-context characters, 50 recent chat messages, and 0.35 minimum relevance score where available.
-- [ ] Add project configuration for `AI_GATEWAY_CHAT_MODEL`, `AI_GATEWAY_EMBEDDING_MODEL`, optional fallback chat models, and embedding dimensions.
-- [ ] Set default chat model to `alibaba/qwen3.7-flash`.
-- [ ] Document `minimax/minimax-m3` and `moonshotai/kimi-k2.5` as configurable alternatives for better coding quality.
-- [ ] Set default embedding model to `openai/text-embedding-3-small` with 1536 dimensions.
-- [ ] Configure required auth providers: email/password, Google, and GitHub.
-- [ ] Configure Convex, TanStack Start, Tailwind, shadcn/ui, Better Auth, and Vercel AI SDK environment variables.
-- [ ] Define shared constants for supported extensions, ignored directories, file limits, and retrieval limits.
-- [ ] Add small test fixtures for simple, ignored, generated, and unsupported project files.
+- [x] Add project configuration for ingestion and retrieval limits with environment-variable overrides.
+- [x] Set default ingestion limits to 500 accepted files, 512 KiB per accepted file, 20 MiB total accepted text, and 1000 chunks per project.
+- [x] Add project configuration for supported file extensions with environment-variable overrides.
+- [x] Set default supported extensions to `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md`, `.mdx`, `.css`, `.html`, `.yml`, `.yaml`, `.py`, `.pyi`, `.toml`, `.ini`, `.cfg`, `.txt`, `.rst`.
+- [x] Set default retrieval limits to top 8 chunks, 24,000 max retrieved-context characters, 50 recent chat messages, and 0.35 minimum relevance score where available.
+- [x] Add project configuration for `AI_GATEWAY_CHAT_MODEL`, `AI_GATEWAY_EMBEDDING_MODEL`, optional fallback chat models, and embedding dimensions.
+- [x] Set default chat model to `alibaba/qwen3.7-flash`.
+- [x] Document `minimax/minimax-m3` and `moonshotai/kimi-k2.5` as configurable alternatives for better coding quality.
+- [x] Set default embedding model to `openai/text-embedding-3-small` with 1536 dimensions.
+- [x] Configure required auth providers: email/password, Google, and GitHub.
+- [x] Configure Convex, TanStack Start, Tailwind, shadcn/ui, Better Auth, and Vercel AI SDK environment variables.
+- [x] Define shared constants for supported extensions, ignored directories, file limits, and retrieval limits.
+- [x] Add small test fixtures for simple, ignored, generated, and unsupported project files.
 
 ### Phase 2: Data and Auth
 
