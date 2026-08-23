@@ -8,35 +8,35 @@
  * @module
  */
 
-import type * as auth from '../auth.js'
-import type * as chats from '../chats.js'
-import type * as chunk_queries from '../chunk_queries.js'
-import type * as http from '../http.js'
-import type * as ingestion from '../ingestion.js'
-import type * as lib_auth from '../lib/auth.js'
-import type * as lib_embeddings from '../lib/embeddings.js'
-import type * as projects from '../projects.js'
-import type * as retrieval from '../retrieval.js'
-import type * as vector_search from '../vector_search.js'
+import type * as auth from "../auth.js";
+import type * as chats from "../chats.js";
+import type * as chunk_queries from "../chunk_queries.js";
+import type * as http from "../http.js";
+import type * as ingestion from "../ingestion.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_embeddings from "../lib/embeddings.js";
+import type * as projects from "../projects.js";
+import type * as retrieval from "../retrieval.js";
+import type * as vector_search from "../vector_search.js";
 
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
-} from 'convex/server'
+} from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  auth: typeof auth
-  chats: typeof chats
-  chunk_queries: typeof chunk_queries
-  http: typeof http
-  ingestion: typeof ingestion
-  'lib/auth': typeof lib_auth
-  'lib/embeddings': typeof lib_embeddings
-  projects: typeof projects
-  retrieval: typeof retrieval
-  vector_search: typeof vector_search
-}>
+  auth: typeof auth;
+  chats: typeof chats;
+  chunk_queries: typeof chunk_queries;
+  http: typeof http;
+  ingestion: typeof ingestion;
+  "lib/auth": typeof lib_auth;
+  "lib/embeddings": typeof lib_embeddings;
+  projects: typeof projects;
+  retrieval: typeof retrieval;
+  vector_search: typeof vector_search;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
@@ -48,8 +48,8 @@ declare const fullApi: ApiFromModules<{
  */
 export declare const api: FilterApi<
   typeof fullApi,
-  FunctionReference<any, 'public'>
->
+  FunctionReference<any, "public">
+>;
 
 /**
  * A utility for referencing Convex functions in your app's internal API.
@@ -61,9 +61,9 @@ export declare const api: FilterApi<
  */
 export declare const internal: FilterApi<
   typeof fullApi,
-  FunctionReference<any, 'internal'>
->
+  FunctionReference<any, "internal">
+>;
 
 export declare const components: {
-  betterAuth: import('@convex-dev/better-auth/_generated/component.js').ComponentApi<'betterAuth'>
-}
+  betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+};

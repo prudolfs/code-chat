@@ -75,6 +75,17 @@ export default defineSchema({
     projectId: v.id('projects'),
     role: v.union(v.literal('user'), v.literal('assistant')),
     content: v.string(),
+    sources: v.optional(
+      v.array(
+        v.object({
+          chunkId: v.id('chunks'),
+          path: v.string(),
+          startLine: v.number(),
+          endLine: v.number(),
+        }),
+      ),
+    ),
+    error: v.optional(v.string()),
     sourceChunkIds: v.optional(v.array(v.id('chunks'))),
   })
     .index('by_chatId', ['chatId'])

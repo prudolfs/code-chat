@@ -43,10 +43,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react-swc": "^4.3.3",
+    "convex-test": "^0.0.56",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
     "typescript": "^7.0.2",

@@ -3,7 +3,7 @@
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useMutation, useQuery } from 'convex/react'
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { authClient } from '../lib/auth-client'
 import { prepareProjectArchive } from '../lib/project-archive'
@@ -359,55 +359,11 @@ function ProjectHome({ email }: { email: string }) {
         </form>
       </section>
 
-      <section className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {projects?.map((project) => (
-          <article
-            className="rounded-lg border bg-background p-5"
-            key={project._creationTime}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="font-medium">{project.name}</h2>
-              <span className="text-xs text-muted-foreground">
-                {project.status}
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {project.sourceType}
-            </p>
-            {(project.status === 'indexing' ||
-              project.status === 'pending') && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                Files {project.filesProcessed}/{project.totalFiles} · Chunks{' '}
-                {project.chunksEmbedded}/{project.totalChunks}
-              </p>
-            )}
-            {project.status === 'ready_with_warnings' && (
-              <button
-                className="mt-4 rounded-md border px-3 py-2 text-sm"
-                type="button"
-                onClick={() => setWarningProjectId(project._id)}
-              >
-                Review warnings ({project.failedFiles.length})
-              </button>
-            )}
-            {project.status === 'error' && (
-              <p className="mt-3 text-sm text-destructive">
-                {project.errorMessage}
-              </p>
-            )}
-            <button
-              className="mt-4 rounded-md border px-3 py-2 text-sm"
-              type="button"
-              onClick={() => setWarningProjectId(project._id)}
-            >
-              Delete project
-            </button>
-          </article>
-        ))}
-        {projects?.length === 0 && (
-          <p className="text-muted-foreground">No projects yet.</p>
-        )}
-      </section>
+      <ChatWorkspace
+        projects={projects}
+        onDeleteProject={setWarningProjectId}
+        onReviewWarnings={setWarningProjectId}
+      />
 
       {duplicate && pendingImport && (
         <div className="fixed inset-0 grid place-items-center bg-black/40 p-6">
@@ -493,6 +449,279 @@ function ProjectHome({ email }: { email: string }) {
         />
       )}
     </main>
+  )
+}
+
+type ProjectSummary = {
+  _id: Id<'projects'>
+  _creationTime: number
+  name: string
+  sourceType: 'local' | 'github'
+  status: 'pending' | 'indexing' | 'ready' | 'ready_with_warnings' | 'error'
+  failedFiles: { path: string; reason: string }[]
+  filesProcessed: number
+  totalFiles: number
+  chunksEmbedded: number
+  totalChunks: number
+  errorMessage?: string
+}
+
+function ChatWorkspace({
+  projects,
+  onDeleteProject,
+  onReviewWarnings,
+}: {
+  projects: ProjectSummary[] | undefined
+  onDeleteProject: (projectId: Id<'projects'>) => void
+  onReviewWarnings: (projectId: Id<'projects'>) => void
+}) {
+  const [selectedProjectId, setSelectedProjectId] =
+    useState<Id<'projects'> | null>(null)
+  const [selectedChatId, setSelectedChatId] = useState<Id<'chats'> | null>(null)
+  const [question, setQuestion] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const createChat = useMutation(api.chats.create)
+  const sendMessage = useMutation(api.chats.send)
+  const selectedProject =
+    projects?.find((project) => project._id === selectedProjectId) ??
+    projects?.[0] ??
+    null
+  const chats = useQuery(
+    api.chats.list,
+    selectedProject ? { projectId: selectedProject._id } : 'skip',
+  )
+  const messages = useQuery(
+    api.chats.messages,
+    selectedChatId ? { chatId: selectedChatId } : 'skip',
+  )
+  const projectIsReady =
+    selectedProject?.status === 'ready' ||
+    selectedProject?.status === 'ready_with_warnings'
+  const pendingAssistant =
+    isSending || messages?.at(-1)?.role === 'user' || messages === undefined
+
+  useEffect(() => {
+    if (!selectedProjectId && projects && projects.length > 0) {
+      setSelectedProjectId(projects[0]._id)
+    }
+  }, [projects, selectedProjectId])
+
+  useEffect(() => {
+    setSelectedChatId(null)
+  }, [selectedProjectId])
+
+  useEffect(() => {
+    if (!selectedChatId && chats && chats.length > 0) {
+      setSelectedChatId(chats[0]._id)
+    }
+  }, [chats, selectedChatId])
+
+  async function createNewChat() {
+    if (!selectedProject || !projectIsReady) return
+    setError(null)
+    const chatId = await createChat({ projectId: selectedProject._id })
+    setSelectedChatId(chatId)
+  }
+
+  async function submitQuestion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selectedChatId) return
+    const content = question.trim()
+    if (!content) return
+
+    setQuestion('')
+    setError(null)
+    setIsSending(true)
+    try {
+      await sendMessage({ chatId: selectedChatId, content })
+    } catch (cause) {
+      setQuestion(content)
+      setError(cause instanceof Error ? cause.message : 'Message failed')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  if (projects === undefined) {
+    return (
+      <section className="mx-auto max-w-5xl text-sm text-muted-foreground">
+        Loading projects...
+      </section>
+    )
+  }
+
+  if (projects.length === 0) {
+    return (
+      <section className="mx-auto max-w-5xl text-sm text-muted-foreground">
+        No projects yet.
+      </section>
+    )
+  }
+
+  return (
+    <section className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[280px_1fr]">
+      <aside className="rounded-lg border bg-background">
+        <div className="border-b p-4">
+          <h2 className="font-medium">Projects</h2>
+        </div>
+        <div className="max-h-[34rem] overflow-auto p-2">
+          {projects.map((project) => (
+            <button
+              className={`mb-2 w-full rounded-md p-3 text-left text-sm ${project._id === selectedProject?._id ? 'bg-muted' : 'hover:bg-muted/60'}`}
+              key={project._creationTime}
+              type="button"
+              onClick={() => setSelectedProjectId(project._id)}
+            >
+              <span className="block font-medium">{project.name}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {project.sourceType} · {project.status}
+              </span>
+              {(project.status === 'indexing' ||
+                project.status === 'pending') && (
+                <span className="mt-2 block text-xs text-muted-foreground">
+                  Files {project.filesProcessed}/{project.totalFiles} · Chunks{' '}
+                  {project.chunksEmbedded}/{project.totalChunks}
+                </span>
+              )}
+              {project.status === 'error' && (
+                <span className="mt-2 block text-xs text-destructive">
+                  {project.errorMessage}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        {selectedProject && (
+          <div className="space-y-2 border-t p-3">
+            {selectedProject.status === 'ready_with_warnings' && (
+              <button
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                type="button"
+                onClick={() => onReviewWarnings(selectedProject._id)}
+              >
+                Review warnings ({selectedProject.failedFiles.length})
+              </button>
+            )}
+            <button
+              className="w-full rounded-md border px-3 py-2 text-sm"
+              type="button"
+              onClick={() => onDeleteProject(selectedProject._id)}
+            >
+              Delete project
+            </button>
+          </div>
+        )}
+      </aside>
+
+      <section className="grid min-h-[36rem] overflow-hidden rounded-lg border bg-background lg:grid-cols-[220px_1fr]">
+        <aside className="border-b p-3 lg:border-r lg:border-b-0">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="font-medium">Chats</h2>
+            <button
+              className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+              type="button"
+              disabled={!projectIsReady}
+              onClick={createNewChat}
+            >
+              New
+            </button>
+          </div>
+          <div className="max-h-48 overflow-auto lg:max-h-[31rem]">
+            {chats?.map((chat) => (
+              <button
+                className={`mb-2 w-full rounded-md px-3 py-2 text-left text-sm ${chat._id === selectedChatId ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                key={chat._id}
+                type="button"
+                onClick={() => setSelectedChatId(chat._id)}
+              >
+                {chat.title}
+              </button>
+            ))}
+            {chats?.length === 0 && (
+              <p className="text-sm text-muted-foreground">No chats yet.</p>
+            )}
+          </div>
+        </aside>
+
+        <div className="grid min-h-[36rem] grid-rows-[auto_1fr_auto]">
+          <header className="border-b p-4">
+            <h2 className="font-medium">
+              {selectedProject?.name ?? 'Select a project'}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {projectIsReady
+                ? 'Ask questions against the indexed project.'
+                : 'Chat is available after indexing is ready.'}
+            </p>
+          </header>
+
+          <div className="space-y-4 overflow-auto p-4">
+            {!selectedChatId && projectIsReady && (
+              <button
+                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+                type="button"
+                onClick={createNewChat}
+              >
+                Start a chat
+              </button>
+            )}
+            {messages?.map((message) => (
+              <article
+                className={`max-w-[85%] rounded-lg border p-3 text-sm ${message.role === 'user' ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted'}`}
+                key={message._id}
+              >
+                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.error && (
+                  <p className="mt-2 text-xs text-destructive">
+                    {message.error}
+                  </p>
+                )}
+                {message.sources && message.sources.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {message.sources.map((source) => (
+                      <span
+                        className="rounded-md border bg-background px-2 py-1 text-xs text-foreground"
+                        key={`${message._id}-${source.path}-${source.startLine}`}
+                      >
+                        {source.path}:{source.startLine}-{source.endLine}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </article>
+            ))}
+            {pendingAssistant && selectedChatId && (
+              <p className="text-sm text-muted-foreground">Thinking...</p>
+            )}
+          </div>
+
+          <form className="border-t p-4" onSubmit={submitQuestion}>
+            {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
+            <div className="flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-md border px-3 py-2 text-sm"
+                value={question}
+                disabled={!selectedChatId || !projectIsReady || isSending}
+                placeholder={
+                  projectIsReady
+                    ? 'Ask about this codebase'
+                    : 'Project is not ready'
+                }
+                onChange={(event) => setQuestion(event.target.value)}
+              />
+              <button
+                className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+                type="submit"
+                disabled={!selectedChatId || !projectIsReady || isSending}
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </section>
   )
 }
 
