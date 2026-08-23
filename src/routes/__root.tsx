@@ -19,9 +19,9 @@ export const Route = createRootRouteWithContext<{
       },
       {
         title: 'CodeChat',
-        links: [{ rel: 'stylesheet', href: appCss }],
       },
     ],
+    links: [{ rel: 'stylesheet', href: appCss }],
   }),
   component: RootComponent,
 })

@@ -1,9 +1,10 @@
 import { Navigate, createFileRoute } from '@tanstack/react-router'
+import { AuthForm } from '../components/project-workspace'
 import { authClient } from '../lib/auth-client'
 
-export const Route = createFileRoute('/')({ component: HomeRoute })
+export const Route = createFileRoute('/sign-in')({ component: SignInRoute })
 
-function HomeRoute() {
+function SignInRoute() {
   const { data: session, isPending } = authClient.useSession()
 
   if (isPending) {
@@ -12,5 +13,7 @@ function HomeRoute() {
     )
   }
 
-  return <Navigate to={session ? '/app' : '/sign-in'} replace />
+  if (session) return <Navigate to="/app" replace />
+
+  return <AuthForm />
 }

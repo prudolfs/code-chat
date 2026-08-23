@@ -185,7 +185,7 @@ export function buildProjectConfig(env = readRuntimeEnv()): ProjectConfig {
 }
 
 function readRuntimeEnv(): EnvSource {
-  return typeof process === 'undefined' ? {} : (process.env as EnvSource)
+  return (globalThis as { process?: { env?: EnvSource } }).process?.env ?? {}
 }
 
 function readOptionalString(env: EnvSource, key: string) {

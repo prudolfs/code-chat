@@ -13,13 +13,14 @@ import {
 } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import type { ActionCtx } from './_generated/server'
+import { env } from './_generated/server'
 import {
   requireIdentity,
   requireOwnedChat,
   requireOwnedProject,
 } from './lib/auth'
 import { createGatewayEmbeddingProvider } from './lib/embeddings'
-import { projectConfig } from '../shared/project-config'
+import { convexProjectConfig } from './lib/project_config'
 import {
   buildRetrievalContext,
   notEnoughIndexedContextMessage,
@@ -211,9 +212,12 @@ export const generateAnswer = internalAction({
       const chunks = await ctx.runAction(internal.vector_search.searchChunks, {
         projectId: project._id,
         embedding,
-        limit: projectConfig.retrieval.topK,
+        limit: convexProjectConfig.retrieval.topK,
       })
-      const retrieval = buildRetrievalContext(chunks, projectConfig.retrieval)
+      const retrieval = buildRetrievalContext(
+        chunks,
+        convexProjectConfig.retrieval,
+      )
 
       if (!retrieval.hasEnoughContext) {
         await ctx.runMutation(internal.chats.saveAssistantMessage, {
@@ -227,16 +231,16 @@ export const generateAnswer = internalAction({
 
       const conversation = await ctx.runQuery(internal.chats.recentContext, {
         chatId: chat._id,
-        limit: projectConfig.retrieval.recentMessageLimit,
+        limit: convexProjectConfig.retrieval.recentMessageLimit,
       })
       const prompt = buildChatPrompt({
         question: args.question,
         retrievedContext: retrieval.context,
         conversation,
       })
-      const gateway = createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+      const gateway = createGateway({ apiKey: env.AI_GATEWAY_API_KEY })
       const result = await generateText({
-        model: gateway.languageModel(projectConfig.ai.chatModel),
+        model: gateway.languageModel(convexProjectConfig.ai.chatModel),
         prompt,
         maxRetries: 2,
       })

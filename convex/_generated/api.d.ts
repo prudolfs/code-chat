@@ -15,6 +15,7 @@ import type * as http from "../http.js";
 import type * as ingestion from "../ingestion.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_embeddings from "../lib/embeddings.js";
+import type * as lib_project_config from "../lib/project_config.js";
 import type * as projects from "../projects.js";
 import type * as retrieval from "../retrieval.js";
 import type * as vector_search from "../vector_search.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   ingestion: typeof ingestion;
   "lib/auth": typeof lib_auth;
   "lib/embeddings": typeof lib_embeddings;
+  "lib/project_config": typeof lib_project_config;
   projects: typeof projects;
   retrieval: typeof retrieval;
   vector_search: typeof vector_search;

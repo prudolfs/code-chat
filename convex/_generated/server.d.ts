@@ -30,6 +30,27 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly AI_GATEWAY_API_KEY: string | undefined;
+  readonly AI_GATEWAY_CHAT_MODEL: string | undefined;
+  readonly AI_GATEWAY_EMBEDDING_DIMENSIONS: string | undefined;
+  readonly AI_GATEWAY_EMBEDDING_MODEL: string | undefined;
+  readonly AI_GATEWAY_FALLBACK_CHAT_MODELS: string | undefined;
+  readonly BETTER_AUTH_SECRET: string;
+  readonly BETTER_AUTH_URL: string;
+  readonly GITHUB_CLIENT_ID: string;
+  readonly GITHUB_CLIENT_SECRET: string;
+  readonly GOOGLE_CLIENT_ID: string;
+  readonly GOOGLE_CLIENT_SECRET: string;
+  readonly PROJECT_IGNORED_DIRECTORIES: string | undefined;
+  readonly PROJECT_MAX_ACCEPTED_FILES: string | undefined;
+  readonly PROJECT_MAX_ACCEPTED_FILE_BYTES: string | undefined;
+  readonly PROJECT_MAX_CHUNKS_PER_PROJECT: string | undefined;
+  readonly PROJECT_MAX_TOTAL_ACCEPTED_TEXT_BYTES: string | undefined;
+  readonly PROJECT_SUPPORTED_EXTENSIONS: string | undefined;
+  readonly RETRIEVAL_MAX_CONTEXT_CHARS: string | undefined;
+  readonly RETRIEVAL_MIN_RELEVANCE_SCORE: string | undefined;
+  readonly RETRIEVAL_RECENT_MESSAGE_LIMIT: string | undefined;
+  readonly RETRIEVAL_TOP_K: string | undefined;
 };
 
 /**

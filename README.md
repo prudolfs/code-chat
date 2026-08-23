@@ -64,6 +64,11 @@ Fill in the required values:
 
 See [docs/configuration.md](docs/configuration.md) for all optional ingestion, retrieval, and model tuning values.
 
+For local authentication, set the Convex deployment's `BETTER_AUTH_URL` to
+`http://localhost:8080`. OAuth provider callbacks use the frontend proxy at
+`/api/auth/callback/google` and `/api/auth/callback/github`, not the Convex
+`.site` domain.
+
 Generate Convex bindings after schema or function changes:
 
 ```sh

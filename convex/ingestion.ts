@@ -10,13 +10,13 @@ import type { ActionCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import { chunkFile } from '../src/lib/chunking'
 import { createGatewayEmbeddingProvider } from './lib/embeddings'
+import { convexProjectConfig } from './lib/project_config'
 import {
   filterProjectFiles,
   validateProjectLimits,
   type IngestionFile,
 } from '../src/lib/file-filter'
 import { parseGitHubRepository } from '../src/lib/github'
-import { projectConfig } from '../shared/project-config'
 
 export const getProject = internalQuery({
   args: { projectId: v.id('projects') },
@@ -117,21 +117,21 @@ export const run = internalAction({
         ? await readStoredArchive(ctx, archiveStorageId)
         : await downloadGitHubArchive(project.sourceUrl)
       const files = archiveToFiles(archive)
-      const filtered = filterProjectFiles(files, projectConfig.ingestion)
+      const filtered = filterProjectFiles(files, convexProjectConfig.ingestion)
       const accepted = filtered.accepted.slice(
         0,
-        projectConfig.ingestion.maxAcceptedFiles,
+        convexProjectConfig.ingestion.maxAcceptedFiles,
       )
       const warnings: { path: string; reason: string }[] = [
         ...filtered.rejected,
-        ...validateProjectLimits(filtered, projectConfig.ingestion),
+        ...validateProjectLimits(filtered, convexProjectConfig.ingestion),
       ]
       const acceptedWithinSizeLimit: typeof accepted = []
       let acceptedBytes = 0
       for (const file of accepted) {
         if (
           acceptedBytes + file.sizeBytes >
-          projectConfig.ingestion.maxTotalAcceptedTextBytes
+          convexProjectConfig.ingestion.maxTotalAcceptedTextBytes
         ) {
           warnings.push({
             path: file.normalizedPath,
@@ -155,7 +155,7 @@ export const run = internalAction({
         0,
       )
       const limitedChunkedFiles: typeof chunkedFiles = []
-      let chunksRemaining = projectConfig.ingestion.maxChunksPerProject
+      let chunksRemaining = convexProjectConfig.ingestion.maxChunksPerProject
       for (const entry of chunkedFiles) {
         const chunks = entry.chunks.slice(0, chunksRemaining)
         if (chunks.length < entry.chunks.length) {
@@ -171,7 +171,7 @@ export const run = internalAction({
       }
       const totalChunks = Math.min(
         totalChunksBeforeLimit,
-        projectConfig.ingestion.maxChunksPerProject,
+        convexProjectConfig.ingestion.maxChunksPerProject,
       )
 
       await ctx.runMutation(internal.ingestion.setProgress, {

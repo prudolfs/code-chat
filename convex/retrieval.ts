@@ -3,7 +3,7 @@ import { internal } from './_generated/api'
 import { action } from './_generated/server'
 import { createGatewayEmbeddingProvider } from './lib/embeddings'
 import { requireIdentity } from './lib/auth'
-import { projectConfig } from '../shared/project-config'
+import { convexProjectConfig } from './lib/project_config'
 import {
   buildRetrievalContext,
   notEnoughIndexedContextMessage,
@@ -29,9 +29,9 @@ export const retrieve = action({
     const chunks = await ctx.runAction(internal.vector_search.searchChunks, {
       projectId: args.projectId,
       embedding,
-      limit: projectConfig.retrieval.topK,
+      limit: convexProjectConfig.retrieval.topK,
     })
-    const context = buildRetrievalContext(chunks, projectConfig.retrieval)
+    const context = buildRetrievalContext(chunks, convexProjectConfig.retrieval)
 
     return {
       ...context,

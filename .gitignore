@@ -38,3 +38,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Test fixtures intentionally include ignored directory names.
 !fixtures/
 !fixtures/**
+
+.notes.md

@@ -1,11 +1,12 @@
 import { createGateway } from '@ai-sdk/gateway'
 import { embed, embedMany } from 'ai'
 import type { EmbeddingProvider } from '../../shared/embeddings'
-import { projectConfig } from '../../shared/project-config'
+import { convexProjectConfig } from './project_config'
+import { env } from '../_generated/server'
 
 export function createGatewayEmbeddingProvider(): EmbeddingProvider {
-  const gateway = createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
-  const model = gateway.embeddingModel(projectConfig.ai.embeddingModel)
+  const gateway = createGateway({ apiKey: env.AI_GATEWAY_API_KEY })
+  const model = gateway.embeddingModel(convexProjectConfig.ai.embeddingModel)
 
   return {
     async embedText(value) {
@@ -24,7 +25,7 @@ export function createGatewayEmbeddingProvider(): EmbeddingProvider {
 }
 
 function validateDimensions(embedding: number[]) {
-  if (embedding.length !== projectConfig.ai.embeddingDimensions) {
+  if (embedding.length !== convexProjectConfig.ai.embeddingDimensions) {
     throw new Error('Embedding provider returned an unexpected dimension')
   }
   return embedding

@@ -15,6 +15,25 @@ The app keeps MVP tuning values in configuration so development and deployment c
 - `GITHUB_CLIENT_SECRET`
 - `AI_GATEWAY_API_KEY`
 
+Better Auth runs in Convex but is exposed through the TanStack Start
+`/api/auth/*` proxy. Set `BETTER_AUTH_URL` in the Convex deployment to the
+public frontend origin. For local development this is
+`http://localhost:8080`; it is not the `.convex.site` URL.
+
+Configure the OAuth applications with these local development values:
+
+- Authorized origin: `http://localhost:8080`
+- Google redirect URI: `http://localhost:8080/api/auth/callback/google`
+- GitHub callback URL: `http://localhost:8080/api/auth/callback/github`
+
+Production OAuth applications must use the same paths on the deployed
+frontend origin.
+
+Backend variables such as `BETTER_AUTH_SECRET`, OAuth client credentials, AI
+Gateway credentials, and model/limit overrides must be configured in the
+Convex deployment through Dashboard Settings or `convex env set`. Local
+dotenv files do not populate the environment of hosted Convex functions.
+
 ## AI Gateway Defaults
 
 - `AI_GATEWAY_CHAT_MODEL`: `alibaba/qwen3.7-flash`
